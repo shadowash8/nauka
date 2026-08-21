@@ -76,6 +76,7 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
 
   toplevel_update_borders(toplevel);
   focus_toplevel(toplevel);
+  arrange_windows(toplevel->server);
 }
 
 static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
@@ -88,6 +89,7 @@ static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
   }
 
   wl_list_remove(&toplevel->link);
+  arrange_windows(toplevel->server);
 }
 
 static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {

@@ -23,6 +23,8 @@ static void config_set_defaults(struct nauka_config *config) {
   config->border_color_inactive[1] = 0.3f;
   config->border_color_inactive[2] = 0.3f;
   config->border_color_inactive[3] = 1.0f;
+  config->outer_gap = 10;
+  config->inner_gap = 10;
 }
 
 /* Parses "#rrggbb" or "#rrggbbaa" into a float[4] rgba. Returns false on
@@ -169,6 +171,22 @@ static void config_parse_line(struct nauka_config *config, char *line) {
     char *value = next_token(&cursor);
     if (value != NULL) {
       parse_hex_color(value, config->border_color_inactive);
+    }
+    return;
+  }
+
+  if (strcmp(directive, "inner_gap") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      config->inner_gap = atoi(value);
+    }
+    return;
+  }
+
+  if (strcmp(directive, "outer_gap") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      config->outer_gap = atoi(value);
     }
     return;
   }

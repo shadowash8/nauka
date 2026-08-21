@@ -2,6 +2,7 @@
 #include "decoration.h"
 #include "keyboard.h"
 #include "layer_shell.h"
+#include "layout.h"
 #include "output.h"
 #include "pointer.h"
 #include "tags.h"

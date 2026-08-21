@@ -111,6 +111,7 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         break;
       case NAUKA_ACTION_RELOAD:
         config_reload(&server->config);
+        arrange_windows(server);
         break;
       case NAUKA_ACTION_CLOSE_ACTIVE: {
         struct wlr_surface *surface =

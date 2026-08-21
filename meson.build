@@ -54,6 +54,7 @@ executable(
         'src/decoration.c',
         'src/keyboard.c',
         'src/layer_shell.c',
+        'src/layout.c',
         'src/output.c',
         'src/pointer.c',
         'src/tags.c',

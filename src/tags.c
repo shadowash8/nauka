@@ -23,6 +23,7 @@ void view_tag(struct nauka_server *server, int tag) {
       break;
     }
   }
+  arrange_windows(server);
 }
 
 void move_focus_to_tag(struct nauka_server *server, int tag) {
@@ -52,4 +53,5 @@ void move_focus_to_tag(struct nauka_server *server, int tag) {
   if (tag != server->current_tag) {
     wlr_seat_keyboard_clear_focus(server->seat);
   }
+  arrange_windows(server);
 }
