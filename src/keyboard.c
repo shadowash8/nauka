@@ -6,6 +6,7 @@
 
 #include <wayland-server-core.h>
 
+#include <wlr/backend/session.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
@@ -137,6 +138,23 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
   const xkb_keysym_t *syms;
   int nsyms =
       xkb_state_key_get_syms(keyboard->wlr_keyboard->xkb_state, keycode, &syms);
+
+  if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+    uint32_t mods = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
+
+    if ((mods & (WLR_MODIFIER_CTRL | WLR_MODIFIER_ALT)) ==
+        (WLR_MODIFIER_CTRL | WLR_MODIFIER_ALT)) {
+
+      xkb_keysym_t sym = xkb_keysym_to_lower(syms[0]);
+
+      if (sym >= XKB_KEY_XF86Switch_VT_1 && sym <= XKB_KEY_XF86Switch_VT_12) {
+
+        unsigned vt = sym - XKB_KEY_XF86Switch_VT_1 + 1;
+        wlr_session_change_vt(server->session, vt);
+        return;
+      }
+    }
+  }
 
   bool handled = false;
   uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);

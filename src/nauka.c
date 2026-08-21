@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
    * backend based on the current environment, such as opening an X11 window
    * if an X11 server is running. */
   server.backend = wlr_backend_autocreate(
-      wl_display_get_event_loop(server.wl_display), NULL);
+      wl_display_get_event_loop(server.wl_display), &server.session);
   if (server.backend == NULL) {
     wlr_log(WLR_ERROR, "failed to create wlr_backend");
     return 1;
