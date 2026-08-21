@@ -1,5 +1,7 @@
 #include "nauka.h"
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <wayland-server-core.h>
 
@@ -95,6 +97,27 @@ static bool handle_keybinding(struct nauka_server *server, xkb_keysym_t sym) {
         wl_container_of(server->toplevels.prev, next_toplevel, link);
     focus_toplevel(next_toplevel);
     break;
+  case XKB_KEY_Return:
+    pid_t pid = fork();
+
+    if (pid == 0) {
+      execlp("foot", "foot", NULL);
+      _exit(1);
+    }
+    break;
+  case XKB_KEY_q: {
+    struct wlr_surface *surface = server->seat->keyboard_state.focused_surface;
+
+    if (surface) {
+      struct wlr_xdg_toplevel *toplevel =
+          wlr_xdg_toplevel_try_from_wlr_surface(surface);
+
+      if (toplevel) {
+        wlr_xdg_toplevel_send_close(toplevel);
+      }
+    }
+    break;
+  }
   default:
     return false;
   }
