@@ -16,6 +16,8 @@ struct nauka_toplevel {
 
   struct wlr_scene_tree *border_tree;
   struct wlr_scene_rect *border[4];
+
+  int tag;
 };
 
 struct nauka_popup {
@@ -29,6 +31,8 @@ void toplevel_update_borders(struct nauka_toplevel *toplevel);
 void toplevel_set_border_color(struct nauka_toplevel *toplevel, bool active);
 
 void server_new_xdg_toplevel(struct wl_listener *listener, void *data);
+
+void update_toplevel_visibility(struct nauka_server *server);
 
 void server_new_xdg_popup(struct wl_listener *listener, void *data);
 

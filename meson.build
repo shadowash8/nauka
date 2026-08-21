@@ -56,6 +56,7 @@ executable(
         'src/layer_shell.c',
         'src/output.c',
         'src/pointer.c',
+        'src/tags.c',
         'src/toplevel.c',
     ],
     include_directories: inc,

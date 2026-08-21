@@ -63,6 +63,9 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
     wlr_output_layout_get_box(toplevel->server->output_layout, output, &box);
   }
 
+  /* Set toplevel tag to current focused tag */
+  toplevel->tag = toplevel->server->current_tag;
+
   struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
   int width = geo.width > 0 ? geo.width : box.width;
   int height = geo.height > 0 ? geo.height : box.height;
@@ -116,6 +119,20 @@ static void xdg_toplevel_destroy(struct wl_listener *listener, void *data) {
   wl_list_remove(&toplevel->request_fullscreen.link);
 
   free(toplevel);
+}
+
+bool toplevel_is_visible(struct nauka_toplevel *toplevel) {
+  return toplevel->tag == toplevel->server->current_tag;
+}
+
+void update_toplevel_visibility(struct nauka_server *server) {
+  struct nauka_toplevel *toplevel;
+
+  wl_list_for_each(toplevel, &server->toplevels, link) {
+    bool visible = toplevel->tag == server->current_tag;
+
+    wlr_scene_node_set_enabled(&toplevel->scene_tree->node, visible);
+  }
 }
 
 static void begin_interactive(struct nauka_toplevel *toplevel,

@@ -225,6 +225,7 @@ int main(int argc, char *argv[]) {
 
   /* Load config file on boot */
   config_load(&server.config);
+  server.current_tag = 0;
 
   /* Set the WAYLAND_DISPLAY environment variable to our socket and run the
    * startup command if requested. */

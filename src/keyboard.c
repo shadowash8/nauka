@@ -131,6 +131,12 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
           focus_toplevel(next_toplevel);
         }
         break;
+      case NAUKA_ACTION_VIEW_TAG:
+        view_tag(server, kb->tag);
+        break;
+      case NAUKA_ACTION_MOVE_FOCUS_TO_TAG:
+        move_focus_to_tag(server, kb->tag);
+        break;
       }
 
       handled = true;

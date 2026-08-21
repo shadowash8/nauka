@@ -7,6 +7,8 @@ enum nauka_keybind_action {
   NAUKA_ACTION_RELOAD,
   NAUKA_ACTION_CLOSE_ACTIVE,
   NAUKA_ACTION_NEXT_TOPLEVEL,
+  NAUKA_ACTION_VIEW_TAG,
+  NAUKA_ACTION_MOVE_FOCUS_TO_TAG,
 };
 
 struct nauka_keybind {
@@ -15,6 +17,7 @@ struct nauka_keybind {
   enum nauka_keybind_action action;
   char *command;
   struct nauka_keybind *next;
+  int tag;
 };
 
 struct nauka_config {

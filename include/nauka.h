@@ -4,6 +4,7 @@
 #include "layer_shell.h"
 #include "output.h"
 #include "pointer.h"
+#include "tags.h"
 #include "toplevel.h"
 #include <wlr/backend.h>
 #include <wlr/util/box.h>
@@ -59,4 +60,5 @@ struct nauka_server {
   struct wl_listener new_output;
 
   struct nauka_config config;
+  int current_tag;
 };
