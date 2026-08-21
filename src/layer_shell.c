@@ -13,10 +13,6 @@ static void layer_surface_handle_commit(struct wl_listener *listener,
 
   struct wlr_layer_surface_v1 *surface = layer_surface->layer_surface;
 
-  /*
-   * The first commit is the client's initial layer-surface commit.
-   * It has no buffer and exists to request a configure event.
-   */
   if (!surface->initialized) {
     return;
   }
@@ -29,13 +25,15 @@ static void layer_surface_handle_commit(struct wl_listener *listener,
 
   struct nauka_server *server = layer_surface->server;
 
-  struct wlr_box output_box;
-  wlr_output_layout_get_box(server->output_layout, output, &output_box);
+  struct wlr_box full_area = {0};
+  wlr_output_layout_get_box(server->output_layout, output, &full_area);
+  full_area.x = 0;
+  full_area.y = 0;
 
-  /*
-   * Tell the client how large its layer surface should be.
-   */
-  wlr_layer_surface_v1_configure(surface, output_box.width, output_box.height);
+  struct wlr_box usable_area = full_area;
+
+  wlr_scene_layer_surface_v1_configure(layer_surface->scene_tree, &full_area,
+                                       &usable_area);
 }
 
 static void layer_surface_handle_map(struct wl_listener *listener, void *data) {
