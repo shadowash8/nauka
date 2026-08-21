@@ -74,6 +74,17 @@ static void layer_surface_handle_unmap(struct wl_listener *listener,
   }
 }
 
+static void layer_surface_handle_output_destroy(struct wl_listener *listener,
+                                                void *data) {
+  (void)data;
+  struct nauka_layer_surface *layer_surface =
+      wl_container_of(listener, layer_surface, output_destroy);
+
+  /* The output is going away — destroy the layer surface now instead of
+   * letting a stray commit dereference a stale/invalid wlr_output later. */
+  wlr_layer_surface_v1_destroy(layer_surface->layer_surface);
+}
+
 static void layer_surface_handle_destroy(struct wl_listener *listener,
                                          void *data) {
   (void)data;
@@ -86,6 +97,7 @@ static void layer_surface_handle_destroy(struct wl_listener *listener,
   wl_list_remove(&layer_surface->unmap.link);
   wl_list_remove(&layer_surface->destroy.link);
   wl_list_remove(&layer_surface->new_popup.link);
+  wl_list_remove(&layer_surface->output_destroy.link);
 
   free(layer_surface);
 }
@@ -176,6 +188,21 @@ void server_new_layer_surface(struct wl_listener *listener, void *data) {
   layer_surface->scene_tree =
       wlr_scene_layer_surface_v1_create(parent, wlr_layer_surface);
   wlr_layer_surface->data = layer_surface->scene_tree->tree;
+
+  if (wlr_layer_surface->output == NULL) {
+    if (wl_list_empty(&server->outputs)) {
+      wlr_layer_surface_v1_destroy(wlr_layer_surface);
+      free(layer_surface);
+      return;
+    }
+    struct nauka_output *first_output =
+        wl_container_of(server->outputs.next, first_output, link);
+    wlr_layer_surface->output = first_output->wlr_output;
+  }
+
+  layer_surface->output_destroy.notify = layer_surface_handle_output_destroy;
+  wl_signal_add(&wlr_layer_surface->output->events.destroy,
+                &layer_surface->output_destroy);
 
   layer_surface->commit.notify = layer_surface_handle_commit;
   wl_signal_add(&wlr_layer_surface->surface->events.commit,
