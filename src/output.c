@@ -18,11 +18,13 @@ void output_frame(struct wl_listener *listener, void *data) {
       wlr_scene_get_scene_output(scene, output->wlr_output);
 
   /* Render the scene if needed and commit the output */
-  wlr_scene_output_commit(scene_output, NULL);
+  bool rendered = wlr_scene_output_commit(scene_output, NULL);
 
-  struct timespec now;
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  wlr_scene_output_send_frame_done(scene_output, &now);
+  if (rendered) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    wlr_scene_output_send_frame_done(scene_output, &now);
+  }
 }
 
 static void output_request_state(struct wl_listener *listener, void *data) {
