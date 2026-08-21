@@ -24,3 +24,7 @@ struct nauka_popup {
 void server_new_xdg_toplevel(struct wl_listener *listener, void *data);
 
 void server_new_xdg_popup(struct wl_listener *listener, void *data);
+
+void toplevel_begin_move(struct nauka_toplevel *toplevel);
+
+void toplevel_begin_resize(struct nauka_toplevel *toplevel, uint32_t edges);

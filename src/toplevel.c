@@ -106,6 +106,14 @@ static void begin_interactive(struct nauka_toplevel *toplevel,
   }
 }
 
+void toplevel_begin_move(struct nauka_toplevel *toplevel) {
+  begin_interactive(toplevel, NAUKA_CURSOR_MOVE, 0);
+}
+
+void toplevel_begin_resize(struct nauka_toplevel *toplevel, uint32_t edges) {
+  begin_interactive(toplevel, NAUKA_CURSOR_RESIZE, edges);
+}
+
 static void xdg_toplevel_request_move(struct wl_listener *listener,
                                       void *data) {
   /* This event is raised when a client would like to begin an interactive

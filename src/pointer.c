@@ -3,6 +3,7 @@
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 
+#include <linux/input-event-codes.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
@@ -266,20 +267,48 @@ void server_cursor_button(struct wl_listener *listener, void *data) {
   struct nauka_server *server =
       wl_container_of(listener, server, cursor_button);
   struct wlr_pointer_button_event *event = data;
+  if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
+    /* If you released any buttons, we exit interactive move/resize mode. */
+    wlr_seat_pointer_notify_button(server->seat, event->time_msec,
+                                   event->button, event->state);
+    reset_cursor_mode(server);
+    return;
+  }
+
+  double sx, sy;
+  struct wlr_surface *surface = NULL;
+  struct nauka_toplevel *toplevel = desktop_toplevel_at(
+      server, server->cursor->x, server->cursor->y, &surface, &sx, &sy);
+
+  struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(server->seat);
+  uint32_t modifiers = keyboard ? wlr_keyboard_get_modifiers(keyboard) : 0;
+
+  if (toplevel != NULL && (modifiers & WLR_MODIFIER_ALT)) {
+    focus_toplevel(toplevel);
+
+    if (event->button == BTN_LEFT) {
+      toplevel_begin_move(toplevel);
+    } else if (event->button == BTN_RIGHT) {
+      struct wlr_box *geo = &toplevel->xdg_toplevel->base->geometry;
+      double win_x = toplevel->scene_tree->node.x + geo->x;
+      double win_y = toplevel->scene_tree->node.y + geo->y;
+
+      uint32_t edges = 0;
+      edges |= (server->cursor->x < win_x + geo->width / 2) ? WLR_EDGE_LEFT
+                                                            : WLR_EDGE_RIGHT;
+      edges |= (server->cursor->y < win_y + geo->height / 2) ? WLR_EDGE_TOP
+                                                             : WLR_EDGE_BOTTOM;
+
+      toplevel_begin_resize(toplevel, edges);
+    }
+    return; /* don't forward the click to the client */
+  }
+
   /* Notify the client with pointer focus that a button press has occurred */
   wlr_seat_pointer_notify_button(server->seat, event->time_msec, event->button,
                                  event->state);
-  if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
-    /* If you released any buttons, we exit interactive move/resize mode. */
-    reset_cursor_mode(server);
-  } else {
-    /* Focus that client if the button was _pressed_ */
-    double sx, sy;
-    struct wlr_surface *surface = NULL;
-    struct nauka_toplevel *toplevel = desktop_toplevel_at(
-        server, server->cursor->x, server->cursor->y, &surface, &sx, &sy);
-    focus_toplevel(toplevel);
-  }
+
+  focus_toplevel(toplevel);
 }
 
 void server_cursor_axis(struct wl_listener *listener, void *data) {
