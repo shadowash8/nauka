@@ -209,6 +209,14 @@ void server_new_xdg_popup(struct wl_listener *listener, void *data) {
   /* This event is raised when a client creates a new popup. */
   struct wlr_xdg_popup *xdg_popup = data;
 
+  if (xdg_popup->parent == NULL) {
+    /* Layer-shell-anchored popup (e.g. a waybar tooltip). It has no
+     * xdg_surface parent — it's associated via
+     * wlr_layer_surface_v1.events.new_popup instead, handled in
+     * layer_shell.c. Nothing to do here. */
+    return;
+  }
+
   struct nauka_popup *popup = calloc(1, sizeof(*popup));
   popup->xdg_popup = xdg_popup;
 
@@ -217,10 +225,25 @@ void server_new_xdg_popup(struct wl_listener *listener, void *data) {
    * provide the proper parent scene node of the xdg popup. To enable this,
    * we always set the user data field of xdg_surfaces to the corresponding
    * scene node. */
-  struct wlr_xdg_surface *parent =
+  struct wlr_scene_tree *parent_tree = NULL;
+  struct wlr_xdg_surface *parent_xdg =
       wlr_xdg_surface_try_from_wlr_surface(xdg_popup->parent);
-  assert(parent != NULL);
-  struct wlr_scene_tree *parent_tree = parent->data;
+
+  if (parent_xdg != NULL) {
+    parent_tree = parent_xdg->data;
+  } else {
+    struct wlr_layer_surface_v1 *parent_layer =
+        wlr_layer_surface_v1_try_from_wlr_surface(xdg_popup->parent);
+    if (parent_layer != NULL) {
+      parent_tree = parent_layer->data;
+    }
+  }
+
+  if (parent_tree == NULL) {
+    free(popup);
+    return;
+  }
+
   xdg_popup->base->data =
       wlr_scene_xdg_surface_create(parent_tree, xdg_popup->base);
 

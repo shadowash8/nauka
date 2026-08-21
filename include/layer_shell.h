@@ -16,6 +16,7 @@ struct nauka_layer_surface {
   struct wl_listener map;
   struct wl_listener unmap;
   struct wl_listener destroy;
+  struct wl_listener new_popup;
 
   bool mapped;
 };

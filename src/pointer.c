@@ -90,9 +90,9 @@ void seat_request_set_selection(struct wl_listener *listener, void *data) {
 }
 
 static struct nauka_toplevel *desktop_toplevel_at(struct nauka_server *server,
-                                                   double lx, double ly,
-                                                   struct wlr_surface **surface,
-                                                   double *sx, double *sy) {
+                                                  double lx, double ly,
+                                                  struct wlr_surface **surface,
+                                                  double *sx, double *sy) {
   /* This returns the topmost node in the scene at the given layout coords.
    * We only care about surface nodes as we are specifically looking for a
    * surface in the surface tree of a nauka_toplevel. */
@@ -114,6 +114,9 @@ static struct nauka_toplevel *desktop_toplevel_at(struct nauka_server *server,
   struct wlr_scene_tree *tree = node->parent;
   while (tree != NULL && tree->node.data == NULL) {
     tree = tree->node.parent;
+  }
+  if (tree == NULL) {
+    return NULL;
   }
   return tree->node.data;
 }
@@ -295,8 +298,7 @@ void server_cursor_frame(struct wl_listener *listener, void *data) {
    * event. Frame events are sent after regular pointer events to group
    * multiple events together. For instance, two axis events may happen at the
    * same time, in which case a frame event won't be sent in between. */
-  struct nauka_server *server =
-      wl_container_of(listener, server, cursor_frame);
+  struct nauka_server *server = wl_container_of(listener, server, cursor_frame);
   /* Notify the client with pointer focus of the frame event. */
   wlr_seat_pointer_notify_frame(server->seat);
 }

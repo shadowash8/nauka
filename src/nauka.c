@@ -23,6 +23,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
@@ -99,6 +100,7 @@ int main(int argc, char *argv[]) {
   /* Creates an output layout, which a wlroots utility for working with an
    * arrangement of screens in a physical layout. */
   server.output_layout = wlr_output_layout_create(server.wl_display);
+  wlr_xdg_output_manager_v1_create(server.wl_display, server.output_layout);
 
   /* Configure a listener to be notified when new outputs are available on the
    * backend. */
