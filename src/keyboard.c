@@ -1,3 +1,4 @@
+#include "config.h"
 #include "nauka.h"
 #include <stdlib.h>
 #include <sys/types.h>
@@ -69,81 +70,81 @@ static void keyboard_handle_modifiers(struct wl_listener *listener,
                                      &keyboard->wlr_keyboard->modifiers);
 }
 
-static bool handle_keybinding(struct nauka_server *server, xkb_keysym_t sym) {
-  /*
-   * Here we handle compositor keybindings. This is when the compositor is
-   * processing keys, rather than passing them on to the client for its own
-   * processing.
-   *
-   * This function assumes Alt is held down.
-   */
-  switch (sym) {
-  case XKB_KEY_Escape:
-    wl_display_terminate(server->wl_display);
-    break;
-  case XKB_KEY_F1:
-    /* Cycle to the next toplevel */
-    if (wl_list_length(&server->toplevels) < 2) {
-      break;
+static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
+                            const xkb_keysym_t *syms, int nsyms) {
+  bool handled = false;
+
+  for (struct nauka_keybind *kb = server->config.keybinds; kb != NULL;
+       kb = kb->next) {
+    uint32_t mask = WLR_MODIFIER_SHIFT | WLR_MODIFIER_CTRL | WLR_MODIFIER_ALT |
+                    WLR_MODIFIER_LOGO;
+
+    if ((modifiers & mask) != kb->mods) {
+      continue;
     }
-    struct nauka_toplevel *next_toplevel =
-        wl_container_of(server->toplevels.prev, next_toplevel, link);
-    focus_toplevel(next_toplevel);
-    break;
-  case XKB_KEY_Return:
-    pid_t pid = fork();
-
-    if (pid == 0) {
-      execlp("foot", "foot", NULL);
-      _exit(1);
-    }
-    break;
-  case XKB_KEY_q: {
-    struct wlr_surface *surface = server->seat->keyboard_state.focused_surface;
-
-    if (surface) {
-      struct wlr_xdg_toplevel *toplevel =
-          wlr_xdg_toplevel_try_from_wlr_surface(surface);
-
-      if (toplevel) {
-        wlr_xdg_toplevel_send_close(toplevel);
+    for (int i = 0; i < nsyms; i++) {
+      if (xkb_keysym_to_lower(syms[i]) != xkb_keysym_to_lower(kb->keysym)) {
+        continue;
       }
+
+      switch (kb->action) {
+      case NAUKA_ACTION_RUN: {
+        pid_t pid = fork();
+        if (pid == 0) {
+          execl("/bin/sh", "/bin/sh", "-c", kb->command, (void *)NULL);
+          _exit(1);
+        }
+        break;
+      }
+      case NAUKA_ACTION_EXIT:
+        wl_display_terminate(server->wl_display);
+        break;
+      case NAUKA_ACTION_CLOSE_ACTIVE: {
+        struct wlr_surface *surface =
+            server->seat->keyboard_state.focused_surface;
+        if (surface) {
+          struct wlr_xdg_toplevel *toplevel =
+              wlr_xdg_toplevel_try_from_wlr_surface(surface);
+          if (toplevel) {
+            wlr_xdg_toplevel_send_close(toplevel);
+          }
+        }
+        break;
+      }
+      case NAUKA_ACTION_NEXT_TOPLEVEL:
+        if (wl_list_length(&server->toplevels) >= 2) {
+          struct nauka_toplevel *next_toplevel =
+              wl_container_of(server->toplevels.prev, next_toplevel, link);
+          focus_toplevel(next_toplevel);
+        }
+        break;
+      }
+
+      handled = true;
     }
-    break;
   }
-  default:
-    return false;
-  }
-  return true;
+
+  return handled;
 }
 
 static void keyboard_handle_key(struct wl_listener *listener, void *data) {
-  /* This event is raised when a key is pressed or released. */
   struct nauka_keyboard *keyboard = wl_container_of(listener, keyboard, key);
   struct nauka_server *server = keyboard->server;
   struct wlr_keyboard_key_event *event = data;
   struct wlr_seat *seat = server->seat;
 
-  /* Translate libinput keycode -> xkbcommon */
   uint32_t keycode = event->keycode + 8;
-  /* Get a list of keysyms based on the keymap for this keyboard */
   const xkb_keysym_t *syms;
   int nsyms =
       xkb_state_key_get_syms(keyboard->wlr_keyboard->xkb_state, keycode, &syms);
 
   bool handled = false;
   uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
-  if ((modifiers & WLR_MODIFIER_ALT) &&
-      event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-    /* If alt is held down and this button was _pressed_, we attempt to
-     * process it as a compositor keybinding. */
-    for (int i = 0; i < nsyms; i++) {
-      handled = handle_keybinding(server, syms[i]);
-    }
+  if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+    handled = try_keybindings(server, modifiers, syms, nsyms);
   }
 
   if (!handled) {
-    /* Otherwise, we pass it along to the client. */
     wlr_seat_set_keyboard(seat, keyboard->wlr_keyboard);
     wlr_seat_keyboard_notify_key(seat, event->time_msec, event->keycode,
                                  event->state);

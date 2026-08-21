@@ -283,12 +283,14 @@ void server_cursor_button(struct wl_listener *listener, void *data) {
   struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(server->seat);
   uint32_t modifiers = keyboard ? wlr_keyboard_get_modifiers(keyboard) : 0;
 
-  if (toplevel != NULL && (modifiers & WLR_MODIFIER_ALT)) {
-    focus_toplevel(toplevel);
+  if (toplevel && (modifiers & server->config.mod) == server->config.mod) {
 
-    if (event->button == BTN_LEFT) {
+    if (event->button == server->config.move_button) {
+      focus_toplevel(toplevel);
       toplevel_begin_move(toplevel);
-    } else if (event->button == BTN_RIGHT) {
+      return;
+    } else if (event->button == server->config.resize_button) {
+      focus_toplevel(toplevel);
       struct wlr_box *geo = &toplevel->xdg_toplevel->base->geometry;
       double win_x = toplevel->scene_tree->node.x + geo->x;
       double win_y = toplevel->scene_tree->node.y + geo->y;

@@ -1,3 +1,4 @@
+#include "config.h"
 #include "decoration.h"
 #include "keyboard.h"
 #include "layer_shell.h"
@@ -55,4 +56,6 @@ struct nauka_server {
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
   struct wl_listener new_output;
+
+  struct nauka_config config;
 };

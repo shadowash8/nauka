@@ -223,6 +223,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  /* Load config file on boot */
+  config_load(&server.config);
+
   /* Set the WAYLAND_DISPLAY environment variable to our socket and run the
    * startup command if requested. */
   setenv("WAYLAND_DISPLAY", socket, true);
@@ -264,6 +267,7 @@ int main(int argc, char *argv[]) {
   wlr_scene_node_destroy(&server.scene->tree.node);
   wlr_xcursor_manager_destroy(server.cursor_mgr);
   wlr_cursor_destroy(server.cursor);
+  config_destroy(&server.config);
   wlr_allocator_destroy(server.allocator);
   wlr_renderer_destroy(server.renderer);
   wlr_backend_destroy(server.backend);
