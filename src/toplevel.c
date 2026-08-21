@@ -30,8 +30,7 @@ static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
 
 static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
   /* Called when a new surface state is committed. */
-  struct nauka_toplevel *toplevel =
-      wl_container_of(listener, toplevel, commit);
+  struct nauka_toplevel *toplevel = wl_container_of(listener, toplevel, commit);
 
   if (toplevel->xdg_toplevel->base->initial_commit) {
     /* When an xdg_surface performs an initial commit, the compositor must
@@ -152,8 +151,8 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
   struct nauka_toplevel *toplevel = calloc(1, sizeof(*toplevel));
   toplevel->server = server;
   toplevel->xdg_toplevel = xdg_toplevel;
-  toplevel->scene_tree = wlr_scene_xdg_surface_create(
-      &toplevel->server->scene->tree, xdg_toplevel->base);
+  toplevel->scene_tree =
+      wlr_scene_xdg_surface_create(server->toplevel_tree, xdg_toplevel->base);
   toplevel->scene_tree->node.data = toplevel;
   xdg_toplevel->base->data = toplevel->scene_tree;
 

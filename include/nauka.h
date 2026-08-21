@@ -22,6 +22,12 @@ struct nauka_server {
   struct wlr_layer_shell_v1 *layer_shell;
   struct wl_listener new_layer_surface;
 
+  struct wlr_scene_tree *background_tree;
+  struct wlr_scene_tree *bottom_tree;
+  struct wlr_scene_tree *toplevel_tree;
+  struct wlr_scene_tree *top_tree;
+  struct wlr_scene_tree *overlay_tree;
+
   struct wlr_cursor *cursor;
   struct wlr_xcursor_manager *cursor_mgr;
   struct wl_listener cursor_motion;

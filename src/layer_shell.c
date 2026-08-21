@@ -82,8 +82,32 @@ void server_new_layer_surface(struct wl_listener *listener, void *data) {
   layer_surface->server = server;
   layer_surface->layer_surface = wlr_layer_surface;
 
-  layer_surface->scene_tree = wlr_scene_layer_surface_v1_create(
-      &server->scene->tree, wlr_layer_surface);
+  struct wlr_scene_tree *parent;
+
+  switch (wlr_layer_surface->current.layer) {
+  case ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND:
+    parent = server->background_tree;
+    break;
+
+  case ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM:
+    parent = server->bottom_tree;
+    break;
+
+  case ZWLR_LAYER_SHELL_V1_LAYER_TOP:
+    parent = server->top_tree;
+    break;
+
+  case ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY:
+    parent = server->overlay_tree;
+    break;
+
+  default:
+    free(layer_surface);
+    return;
+  }
+
+  layer_surface->scene_tree =
+      wlr_scene_layer_surface_v1_create(parent, wlr_layer_surface);
 
   layer_surface->commit.notify = layer_surface_handle_commit;
   wl_signal_add(&wlr_layer_surface->surface->events.commit,

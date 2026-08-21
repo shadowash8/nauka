@@ -116,6 +116,12 @@ int main(int argc, char *argv[]) {
   server.scene_layout =
       wlr_scene_attach_output_layout(server.scene, server.output_layout);
 
+  server.background_tree = wlr_scene_tree_create(&server.scene->tree);
+  server.bottom_tree = wlr_scene_tree_create(&server.scene->tree);
+  server.toplevel_tree = wlr_scene_tree_create(&server.scene->tree);
+  server.top_tree = wlr_scene_tree_create(&server.scene->tree);
+  server.overlay_tree = wlr_scene_tree_create(&server.scene->tree);
+
   /* Set up xdg-shell version 3. The xdg-shell is a Wayland protocol which is
    * used for application windows. For more detail on shells, refer to
    * https://drewdevault.com/2018/07/29/Wayland-shells.html.
