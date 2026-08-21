@@ -50,6 +50,7 @@ executable(
     'nauka',
     [
         'src/nauka.c',
+        'src/decoration.c',
         'src/keyboard.c',
         'src/layer_shell.c',
         'src/output.c',

@@ -1,3 +1,4 @@
+#include "decoration.h"
 #include "keyboard.h"
 #include "layer_shell.h"
 #include "output.h"
@@ -27,6 +28,9 @@ struct nauka_server {
   struct wlr_scene_tree *toplevel_tree;
   struct wlr_scene_tree *top_tree;
   struct wlr_scene_tree *overlay_tree;
+
+  struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager;
+  struct wl_listener new_toplevel_decoration;
 
   struct wlr_cursor *cursor;
   struct wlr_xcursor_manager *cursor_mgr;

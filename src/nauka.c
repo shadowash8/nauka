@@ -23,6 +23,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
@@ -144,6 +145,13 @@ int main(int argc, char *argv[]) {
   wl_signal_add(&server.layer_shell->events.new_surface,
                 &server.new_layer_surface);
 
+  /* Setup decoration manager */
+  server.xdg_decoration_manager =
+      wlr_xdg_decoration_manager_v1_create(server.wl_display);
+  server.new_toplevel_decoration.notify = server_new_toplevel_decoration;
+  wl_signal_add(&server.xdg_decoration_manager->events.new_toplevel_decoration,
+                &server.new_toplevel_decoration);
+
   /*
    * Creates a cursor, which is a wlroots utility for tracking the cursor
    * image shown on screen.
@@ -238,6 +246,7 @@ int main(int argc, char *argv[]) {
   wl_list_remove(&server.new_xdg_popup.link);
 
   wl_list_remove(&server.new_layer_surface.link);
+  wl_list_remove(&server.new_toplevel_decoration.link);
 
   wl_list_remove(&server.cursor_motion.link);
   wl_list_remove(&server.cursor_motion_absolute.link);
