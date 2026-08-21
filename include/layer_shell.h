@@ -12,6 +12,7 @@ struct nauka_layer_surface {
   struct wlr_layer_surface_v1 *layer_surface;
   struct wlr_scene_layer_surface_v1 *scene_tree;
 
+  struct wl_listener commit;
   struct wl_listener map;
   struct wl_listener unmap;
   struct wl_listener destroy;
