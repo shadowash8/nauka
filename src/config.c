@@ -12,6 +12,47 @@ static void config_set_defaults(struct nauka_config *config) {
   config->move_button = BTN_LEFT;
   config->resize_button = BTN_RIGHT;
   config->keybinds = NULL;
+
+  config->border_width = 2;
+  config->border_color_active[0] = 0.9f;
+  config->border_color_active[1] = 0.6f;
+  config->border_color_active[2] = 0.2f;
+  config->border_color_active[3] = 1.0f;
+
+  config->border_color_inactive[0] = 0.3f;
+  config->border_color_inactive[1] = 0.3f;
+  config->border_color_inactive[2] = 0.3f;
+  config->border_color_inactive[3] = 1.0f;
+}
+
+/* Parses "#rrggbb" or "#rrggbbaa" into a float[4] rgba. Returns false on
+ * malformed input, leaving out unchanged. */
+static bool parse_hex_color(const char *value, float out[4]) {
+  if (value[0] != '#') {
+    return false;
+  }
+  size_t len = strlen(value + 1);
+  if (len != 6 && len != 8) {
+    return false;
+  }
+
+  unsigned int r, g, b, a = 255;
+  int n;
+  if (len == 6) {
+    n = sscanf(value + 1, "%02x%02x%02x", &r, &g, &b);
+    if (n != 3)
+      return false;
+  } else {
+    n = sscanf(value + 1, "%02x%02x%02x%02x", &r, &g, &b, &a);
+    if (n != 4)
+      return false;
+  }
+
+  out[0] = r / 255.0f;
+  out[1] = g / 255.0f;
+  out[2] = b / 255.0f;
+  out[3] = a / 255.0f;
+  return true;
 }
 
 static uint32_t parse_modifier(const char *value) {
@@ -95,15 +136,44 @@ static char *next_token(char **cursor) {
 }
 
 static void config_parse_line(struct nauka_config *config, char *line) {
-  char *hash = strchr(line, '#');
-  if (hash != NULL) {
-    *hash = '\0';
-  }
   line[strcspn(line, "\r\n")] = '\0';
 
-  char *cursor = line;
+  char *trimmed = skip_ws(line);
+  if (trimmed[0] == '#' || trimmed[0] == '\0') {
+    return; /* whole-line comment or blank */
+  }
+
+  char *cursor = trimmed;
   char *directive = next_token(&cursor);
-  if (directive == NULL || strcmp(directive, "keybind") != 0) {
+  if (directive == NULL) {
+    return;
+  }
+
+  if (strcmp(directive, "border_width") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      config->border_width = atoi(value);
+    }
+    return;
+  }
+
+  if (strcmp(directive, "border_color_active") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      parse_hex_color(value, config->border_color_active);
+    }
+    return;
+  }
+
+  if (strcmp(directive, "border_color_inactive") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      parse_hex_color(value, config->border_color_inactive);
+    }
+    return;
+  }
+
+  if (strcmp(directive, "keybind") != 0) {
     return;
   }
 

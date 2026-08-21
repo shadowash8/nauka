@@ -7,6 +7,47 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/edges.h>
 
+void toplevel_update_borders(struct nauka_toplevel *toplevel) {
+  struct nauka_config *cfg = &toplevel->server->config;
+
+  struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
+
+  int w = geo.width;
+  int h = geo.height;
+  int bw = cfg->border_width;
+
+  /* Top */
+  wlr_scene_rect_set_size(toplevel->border[0], w + 2 * bw, bw);
+
+  wlr_scene_node_set_position(&toplevel->border[0]->node, geo.x - bw,
+                              geo.y - bw);
+
+  /* Bottom */
+  wlr_scene_rect_set_size(toplevel->border[1], w + 2 * bw, bw);
+
+  wlr_scene_node_set_position(&toplevel->border[1]->node, geo.x - bw,
+                              geo.y + h);
+
+  /* Left */
+  wlr_scene_rect_set_size(toplevel->border[2], bw, h);
+
+  wlr_scene_node_set_position(&toplevel->border[2]->node, geo.x - bw, geo.y);
+
+  /* Right */
+  wlr_scene_rect_set_size(toplevel->border[3], bw, h);
+
+  wlr_scene_node_set_position(&toplevel->border[3]->node, geo.x + w, geo.y);
+}
+
+void toplevel_set_border_color(struct nauka_toplevel *toplevel, bool active) {
+  struct nauka_config *cfg = &toplevel->server->config;
+  const float *color =
+      active ? cfg->border_color_active : cfg->border_color_inactive;
+  for (int i = 0; i < 4; i++) {
+    wlr_scene_rect_set_color(toplevel->border[i], color);
+  }
+}
+
 static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
   struct nauka_toplevel *toplevel = wl_container_of(listener, toplevel, map);
@@ -30,6 +71,7 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
                               box.x + (box.width - width) / 2,
                               box.y + (box.height - height) / 2);
 
+  toplevel_update_borders(toplevel);
   focus_toplevel(toplevel);
 }
 
@@ -56,6 +98,7 @@ static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
      * dimensions itself. */
     wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, 0, 0);
   }
+  toplevel_update_borders(toplevel);
 }
 
 static void xdg_toplevel_destroy(struct wl_listener *listener, void *data) {
@@ -179,7 +222,25 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
   toplevel->scene_tree =
       wlr_scene_xdg_surface_create(server->toplevel_tree, xdg_toplevel->base);
   toplevel->scene_tree->node.data = toplevel;
-  xdg_toplevel->base->data = toplevel->scene_tree;
+  xdg_toplevel->base->data = toplevel;
+
+  /*
+   * Create the four border rectangles.
+   *
+   * RGBA values are floats in the range 0.0 - 1.0.
+   * Initial color doesn't matter because focus will set it later.
+   */
+  static const float transparent[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+  for (int i = 0; i < 4; i++) {
+    toplevel->border[i] =
+        wlr_scene_rect_create(toplevel->scene_tree, 0, 0, transparent);
+
+    if (toplevel->border[i] == NULL) {
+      /* Handle allocation failure appropriately in your compositor. */
+      return;
+    }
+  }
 
   /* Listen to the various events it can emit */
   toplevel->map.notify = xdg_toplevel_map;

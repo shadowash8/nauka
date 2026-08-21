@@ -13,6 +13,9 @@ struct nauka_toplevel {
   struct wl_listener request_resize;
   struct wl_listener request_maximize;
   struct wl_listener request_fullscreen;
+
+  struct wlr_scene_tree *border_tree;
+  struct wlr_scene_rect *border[4];
 };
 
 struct nauka_popup {
@@ -20,6 +23,10 @@ struct nauka_popup {
   struct wl_listener commit;
   struct wl_listener destroy;
 };
+
+void toplevel_update_borders(struct nauka_toplevel *toplevel);
+
+void toplevel_set_border_color(struct nauka_toplevel *toplevel, bool active);
 
 void server_new_xdg_toplevel(struct wl_listener *listener, void *data);
 

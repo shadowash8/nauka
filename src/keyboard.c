@@ -41,14 +41,23 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
     return;
   }
   struct nauka_server *server = toplevel->server;
-  struct wlr_surface *surface = toplevel->xdg_toplevel->base->surface;
+
+  struct nauka_toplevel *it;
+  wl_list_for_each(it, &server->toplevels, link) {
+    if (it != toplevel) {
+      wlr_xdg_toplevel_set_activated(it->xdg_toplevel, false);
+      toplevel_set_border_color(it, false);
+    }
+  }
+
+  wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, true);
+  toplevel_set_border_color(toplevel, true);
 
   wlr_scene_node_raise_to_top(&toplevel->scene_tree->node);
   wl_list_remove(&toplevel->link);
   wl_list_insert(&server->toplevels, &toplevel->link);
 
-  wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, true);
-  seat_focus_surface(server, surface);
+  seat_focus_surface(server, toplevel->xdg_toplevel->base->surface);
 }
 
 static void keyboard_handle_modifiers(struct wl_listener *listener,

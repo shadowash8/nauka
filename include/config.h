@@ -24,6 +24,10 @@ struct nauka_config {
   uint32_t move_button;
   uint32_t resize_button;
   struct nauka_keybind *keybinds;
+
+  int border_width;
+  float border_color_active[4];
+  float border_color_inactive[4];
 };
 
 void config_load(struct nauka_config *config);
