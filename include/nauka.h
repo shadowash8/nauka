@@ -1,4 +1,5 @@
 #include "keyboard.h"
+#include "layer_shell.h"
 #include "output.h"
 #include "pointer.h"
 #include "toplevel.h"
@@ -17,6 +18,9 @@ struct nauka_server {
   struct wl_listener new_xdg_toplevel;
   struct wl_listener new_xdg_popup;
   struct wl_list toplevels;
+
+  struct wlr_layer_shell_v1 *layer_shell;
+  struct wl_listener new_layer_surface;
 
   struct wlr_cursor *cursor;
   struct wlr_xcursor_manager *cursor_mgr;

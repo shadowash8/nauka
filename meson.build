@@ -12,7 +12,9 @@ cc = meson.get_compiler('c')
 wayland_server = dependency('wayland-server')
 wlroots = dependency('wlroots-0.20')
 xkbcommon = dependency('xkbcommon')
-
+wayland_scanner = find_program('wayland-scanner')
+wayland_protocols = dependency('wayland-protocols')
+protocol_dir = wayland_protocols.get_variable('pkgdatadir')
 inc = include_directories('include')
 
 add_project_arguments(
@@ -20,11 +22,36 @@ add_project_arguments(
     '-Wno-unused-parameter',
     language: 'c',
 )
+
+protocol_files = [
+  'protocols/wlr-layer-shell-unstable-v1.xml',
+]
+
+generated = []
+
+foreach f : protocol_files
+  filename = f.split('/')[-1]
+  dest = filename.replace('.xml', '-protocol.h')
+
+  generated += custom_target(
+    output: dest,
+    input: f,
+    command: [
+      wayland_scanner,
+      'server-header',
+      '@INPUT@',
+      '@OUTPUT@',
+    ],
+    build_by_default: true,
+  )
+endforeach
+
 executable(
     'nauka',
     [
         'src/nauka.c',
         'src/keyboard.c',
+        'src/layer_shell.c',
         'src/output.c',
         'src/pointer.c',
         'src/toplevel.c',

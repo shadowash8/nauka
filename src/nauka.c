@@ -15,6 +15,7 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_pointer.h>
@@ -127,6 +128,14 @@ int main(int argc, char *argv[]) {
   server.new_xdg_popup.notify = server_new_xdg_popup;
   wl_signal_add(&server.xdg_shell->events.new_popup, &server.new_xdg_popup);
 
+  /* Setup layer-shell */
+  server.layer_shell = wlr_layer_shell_v1_create(server.wl_display, 4);
+
+  server.new_layer_surface.notify = server_new_layer_surface;
+
+  wl_signal_add(&server.layer_shell->events.new_surface,
+                &server.new_layer_surface);
+
   /*
    * Creates a cursor, which is a wlroots utility for tracking the cursor
    * image shown on screen.
@@ -219,6 +228,8 @@ int main(int argc, char *argv[]) {
 
   wl_list_remove(&server.new_xdg_toplevel.link);
   wl_list_remove(&server.new_xdg_popup.link);
+
+  wl_list_remove(&server.new_layer_surface.link);
 
   wl_list_remove(&server.cursor_motion.link);
   wl_list_remove(&server.cursor_motion_absolute.link);
