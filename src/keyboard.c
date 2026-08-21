@@ -109,6 +109,9 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
       case NAUKA_ACTION_EXIT:
         wl_display_terminate(server->wl_display);
         break;
+      case NAUKA_ACTION_RELOAD:
+        config_reload(&server->config);
+        break;
       case NAUKA_ACTION_CLOSE_ACTIVE: {
         struct wlr_surface *surface =
             server->seat->keyboard_state.focused_surface;

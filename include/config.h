@@ -1,12 +1,10 @@
-#ifndef NAUKA_CONFIG_H
-#define NAUKA_CONFIG_H
-
 #include <stdint.h>
 #include <xkbcommon/xkbcommon.h>
 
 enum nauka_keybind_action {
   NAUKA_ACTION_RUN,
   NAUKA_ACTION_EXIT,
+  NAUKA_ACTION_RELOAD,
   NAUKA_ACTION_CLOSE_ACTIVE,
   NAUKA_ACTION_NEXT_TOPLEVEL,
 };
@@ -31,6 +29,5 @@ struct nauka_config {
 };
 
 void config_load(struct nauka_config *config);
+void config_reload(struct nauka_config *config);
 void config_destroy(struct nauka_config *config);
-
-#endif

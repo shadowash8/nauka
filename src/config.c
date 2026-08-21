@@ -228,6 +228,8 @@ static void config_parse_line(struct nauka_config *config, char *line) {
     kb->command = strdup(rest);
   } else if (strcasecmp(action_str, "exit") == 0) {
     kb->action = NAUKA_ACTION_EXIT;
+  } else if (strcasecmp(action_str, "reload") == 0) {
+    kb->action = NAUKA_ACTION_RELOAD;
   } else if (strcasecmp(action_str, "kill_active") == 0) {
     kb->action = NAUKA_ACTION_CLOSE_ACTIVE;
   } else if (strcasecmp(action_str, "next_toplevel") == 0) {
@@ -261,6 +263,15 @@ void config_load(struct nauka_config *config) {
   }
 
   fclose(f);
+}
+
+void config_reload(struct nauka_config *config) {
+  struct nauka_config new_config = {0};
+
+  config_load(&new_config);
+
+  config_destroy(config);
+  *config = new_config;
 }
 
 void config_destroy(struct nauka_config *config) {
