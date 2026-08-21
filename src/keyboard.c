@@ -12,25 +12,14 @@
 
 #include <xkbcommon/xkbcommon.h>
 
-void focus_toplevel(struct nauka_toplevel *toplevel) {
-  /* Note: this function only deals with keyboard focus. */
-  if (toplevel == NULL) {
-    return;
-  }
-  struct nauka_server *server = toplevel->server;
+void seat_focus_surface(struct nauka_server *server,
+                        struct wlr_surface *surface) {
   struct wlr_seat *seat = server->seat;
   struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
-  struct wlr_surface *surface = toplevel->xdg_toplevel->base->surface;
   if (prev_surface == surface) {
-    /* Don't re-focus an already focused surface. */
     return;
   }
   if (prev_surface) {
-    /*
-     * Deactivate the previously focused surface. This lets the client know
-     * it no longer has focus and the client will repaint accordingly, e.g.
-     * stop displaying a caret.
-     */
     struct wlr_xdg_toplevel *prev_toplevel =
         wlr_xdg_toplevel_try_from_wlr_surface(prev_surface);
     if (prev_toplevel != NULL) {
@@ -38,22 +27,26 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
     }
   }
   struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
-  /* Move the toplevel to the front */
-  wlr_scene_node_raise_to_top(&toplevel->scene_tree->node);
-  wl_list_remove(&toplevel->link);
-  wl_list_insert(&server->toplevels, &toplevel->link);
-  /* Activate the new surface */
-  wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, true);
-  /*
-   * Tell the seat to have the keyboard enter this surface. wlroots will keep
-   * track of this and automatically send key events to the appropriate
-   * clients without additional work on your part.
-   */
   if (keyboard != NULL) {
     wlr_seat_keyboard_notify_enter(seat, surface, keyboard->keycodes,
                                    keyboard->num_keycodes,
                                    &keyboard->modifiers);
   }
+}
+
+void focus_toplevel(struct nauka_toplevel *toplevel) {
+  if (toplevel == NULL) {
+    return;
+  }
+  struct nauka_server *server = toplevel->server;
+  struct wlr_surface *surface = toplevel->xdg_toplevel->base->surface;
+
+  wlr_scene_node_raise_to_top(&toplevel->scene_tree->node);
+  wl_list_remove(&toplevel->link);
+  wl_list_insert(&server->toplevels, &toplevel->link);
+
+  wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, true);
+  seat_focus_surface(server, surface);
 }
 
 static void keyboard_handle_modifiers(struct wl_listener *listener,

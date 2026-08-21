@@ -45,6 +45,12 @@ static void layer_surface_handle_map(struct wl_listener *listener, void *data) {
       wl_container_of(listener, layer_surface, map);
 
   layer_surface->mapped = true;
+
+  if (layer_surface->layer_surface->current.keyboard_interactive !=
+      ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE) {
+    seat_focus_surface(layer_surface->server,
+                       layer_surface->layer_surface->surface);
+  }
 }
 
 static void layer_surface_handle_unmap(struct wl_listener *listener,
@@ -55,6 +61,19 @@ static void layer_surface_handle_unmap(struct wl_listener *listener,
       wl_container_of(listener, layer_surface, unmap);
 
   layer_surface->mapped = false;
+
+  struct nauka_server *server = layer_surface->server;
+  struct wlr_seat *seat = server->seat;
+
+  if (seat->keyboard_state.focused_surface == layer_surface->surface) {
+    wlr_seat_keyboard_clear_focus(seat);
+
+    if (!wl_list_empty(&server->toplevels)) {
+      struct nauka_toplevel *top =
+          wl_container_of(server->toplevels.next, top, link);
+      focus_toplevel(top);
+    }
+  }
 }
 
 static void layer_surface_handle_destroy(struct wl_listener *listener,
@@ -115,6 +134,7 @@ void server_new_layer_surface(struct wl_listener *listener, void *data) {
 
   layer_surface->server = server;
   layer_surface->layer_surface = wlr_layer_surface;
+  layer_surface->surface = wlr_layer_surface->surface;
 
   if (wlr_layer_surface->output == NULL) {
     if (wl_list_empty(&server->outputs)) {

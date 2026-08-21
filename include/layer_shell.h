@@ -10,6 +10,7 @@ struct nauka_layer_surface {
   struct nauka_server *server;
 
   struct wlr_layer_surface_v1 *layer_surface;
+  struct wlr_surface *surface;
   struct wlr_scene_layer_surface_v1 *scene_tree;
 
   struct wl_listener commit;

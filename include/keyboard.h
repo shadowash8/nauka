@@ -1,5 +1,6 @@
 #include "toplevel.h"
 #include <wlr/types/wlr_input_device.h>
+#include <wlr/types/wlr_scene.h>
 
 struct nauka_keyboard {
   struct wl_list link;
@@ -10,6 +11,9 @@ struct nauka_keyboard {
   struct wl_listener key;
   struct wl_listener destroy;
 };
+
+void seat_focus_surface(struct nauka_server *server,
+                        struct wlr_surface *surface);
 
 void focus_toplevel(struct nauka_toplevel *toplevel);
 
