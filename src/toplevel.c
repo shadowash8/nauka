@@ -13,6 +13,23 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
 
   wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
 
+  /* Center the new toplevel on the output it'll first appear on. */
+  struct wlr_box box = {0};
+  struct wlr_output *output = wlr_output_layout_output_at(
+      toplevel->server->output_layout, toplevel->server->cursor->x,
+      toplevel->server->cursor->y);
+  if (output != NULL) {
+    wlr_output_layout_get_box(toplevel->server->output_layout, output, &box);
+  }
+
+  struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
+  int width = geo.width > 0 ? geo.width : box.width;
+  int height = geo.height > 0 ? geo.height : box.height;
+
+  wlr_scene_node_set_position(&toplevel->scene_tree->node,
+                              box.x + (box.width - width) / 2,
+                              box.y + (box.height - height) / 2);
+
   focus_toplevel(toplevel);
 }
 
