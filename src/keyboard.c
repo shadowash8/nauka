@@ -50,6 +50,11 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
     }
   }
 
+  if (server->focused_toplevel != toplevel) {
+    server->prev_focused = server->focused_toplevel;
+  }
+  server->focused_toplevel = toplevel;
+
   wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, true);
   toplevel_set_border_color(toplevel, true);
 

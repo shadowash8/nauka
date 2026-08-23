@@ -55,6 +55,8 @@ struct nauka_server {
   double grab_x, grab_y;
   struct wlr_box grab_geobox;
   uint32_t resize_edges;
+  struct nauka_toplevel *focused_toplevel;
+  struct nauka_toplevel *prev_focused;
 
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;

@@ -82,14 +82,47 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
 static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
   /* Called when the surface is unmapped, and should no longer be shown. */
   struct nauka_toplevel *toplevel = wl_container_of(listener, toplevel, unmap);
+  struct nauka_server *server = toplevel->server;
 
   /* Reset the cursor mode if the grabbed toplevel was unmapped. */
-  if (toplevel == toplevel->server->grabbed_toplevel) {
-    reset_cursor_mode(toplevel->server);
+  if (toplevel == server->grabbed_toplevel) {
+    reset_cursor_mode(server);
   }
 
   wl_list_remove(&toplevel->link);
-  arrange_windows(toplevel->server);
+
+  if (server->prev_focused == toplevel) {
+    server->prev_focused = NULL;
+  }
+
+  if (server->focused_toplevel == toplevel) {
+    server->focused_toplevel = NULL;
+
+    struct nauka_toplevel *fallback = NULL;
+
+    /* Prefer the previously focused toplevel, if it's still around and
+     * on the current tag. */
+    if (server->prev_focused != NULL &&
+        server->prev_focused->tag == server->current_tag) {
+      fallback = server->prev_focused;
+    }
+
+    if (fallback == NULL) {
+      struct nauka_toplevel *it;
+      wl_list_for_each(it, &server->toplevels, link) {
+        if (it->tag == server->current_tag) {
+          fallback = it;
+          break;
+        }
+      }
+    }
+
+    if (fallback != NULL) {
+      focus_toplevel(fallback);
+    }
+  }
+
+  arrange_windows(server);
 }
 
 static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
