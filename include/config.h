@@ -32,6 +32,7 @@ struct nauka_config {
   float border_color_inactive[4];
   int outer_gap;
   int inner_gap;
+  int border_radius;
 };
 
 void config_load(struct nauka_config *config);

@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
-#include <wlr/types/wlr_scene.h>
 
 void output_frame(struct wl_listener *listener, void *data) {
   (void)data;
@@ -41,6 +41,8 @@ static void output_destroy(struct wl_listener *listener, void *data) {
   (void)data;
 
   struct nauka_output *output = wl_container_of(listener, output, destroy);
+
+  output->wlr_output->data = NULL;
 
   wl_list_remove(&output->frame.link);
   wl_list_remove(&output->request_state.link);

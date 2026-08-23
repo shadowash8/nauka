@@ -2,46 +2,11 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_cursor.h>
-#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
-
-void toplevel_update_borders(struct nauka_toplevel *toplevel) {
-  struct nauka_config *cfg = &toplevel->server->config;
-
-  struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
-
-  int w = geo.width;
-  int h = geo.height;
-  int bw = cfg->border_width;
-
-  /* Top */
-  wlr_scene_rect_set_size(toplevel->border[0], w + 2 * bw, bw);
-  wlr_scene_node_set_position(&toplevel->border[0]->node, -bw, -bw);
-
-  /* Bottom */
-  wlr_scene_rect_set_size(toplevel->border[1], w + 2 * bw, bw);
-  wlr_scene_node_set_position(&toplevel->border[1]->node, -bw, h);
-
-  /* Left */
-  wlr_scene_rect_set_size(toplevel->border[2], bw, h);
-  wlr_scene_node_set_position(&toplevel->border[2]->node, -bw, 0);
-
-  /* Right */
-  wlr_scene_rect_set_size(toplevel->border[3], bw, h);
-  wlr_scene_node_set_position(&toplevel->border[3]->node, w, 0);
-}
-
-void toplevel_set_border_color(struct nauka_toplevel *toplevel, bool active) {
-  struct nauka_config *cfg = &toplevel->server->config;
-  const float *color =
-      active ? cfg->border_color_active : cfg->border_color_inactive;
-  for (int i = 0; i < 4; i++) {
-    wlr_scene_rect_set_color(toplevel->border[i], color);
-  }
-}
 
 static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
@@ -317,17 +282,10 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
    * RGBA values are floats in the range 0.0 - 1.0.
    * Initial color doesn't matter because focus will set it later.
    */
-  static const float transparent[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-
-  for (int i = 0; i < 4; i++) {
-    toplevel->border[i] =
-        wlr_scene_rect_create(toplevel->scene_tree, 0, 0, transparent);
-
-    if (toplevel->border[i] == NULL) {
-      /* Handle allocation failure appropriately in your compositor. */
-      return;
-    }
-  }
+  toplevel->corner_radius = server->config.border_radius;
+  toplevel->border_tree = wlr_scene_tree_create(toplevel->scene_tree);
+  wlr_scene_node_lower_to_bottom(&toplevel->border_tree->node);
+  toplevel->corner_radius = server->config.border_radius;
 
   /* Listen to the various events it can emit */
   toplevel->map.notify = xdg_toplevel_map;

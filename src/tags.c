@@ -1,5 +1,5 @@
 #include "nauka.h"
-#include <wlr/types/wlr_scene.h>
+#include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
 void view_tag(struct nauka_server *server, int tag) {

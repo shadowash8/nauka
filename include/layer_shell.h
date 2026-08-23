@@ -2,7 +2,7 @@
 #include <wayland-server-core.h>
 
 #include <wlr/types/wlr_layer_shell_v1.h>
-#include <wlr/types/wlr_scene.h>
+#include <scenefx/types/wlr_scene.h>
 
 struct nauka_server;
 struct nauka_output;

@@ -5,6 +5,7 @@
 #include "layout.h"
 #include "output.h"
 #include "pointer.h"
+#include "rendering.h"
 #include "tags.h"
 #include "toplevel.h"
 #include <wlr/backend.h>

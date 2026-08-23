@@ -16,11 +16,12 @@ struct nauka_toplevel {
   struct wl_listener request_fullscreen;
 
   struct wlr_scene_tree *border_tree;
-  struct wlr_scene_rect *border[4];
 
   int tag;
   bool is_fullscreen;
   bool floating;
+  int corner_radius;
+  struct wlr_scene_rect *border;
   struct wlr_box floating_geometry;
 };
 

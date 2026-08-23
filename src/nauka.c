@@ -1,6 +1,8 @@
 #include "nauka.h"
 #include <assert.h>
 #include <getopt.h>
+#include <scenefx/render/fx_renderer/fx_renderer.h>
+#include <scenefx/types/wlr_scene.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +22,6 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_pointer.h>
-#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_server_decoration.h>
@@ -72,9 +73,9 @@ int main(int argc, char *argv[]) {
    * can also specify a renderer using the WLR_RENDERER env var.
    * The renderer is responsible for defining the various pixel formats it
    * supports for shared memory, this configures that for clients. */
-  server.renderer = wlr_renderer_autocreate(server.backend);
+  server.renderer = fx_renderer_create(server.backend);
   if (server.renderer == NULL) {
-    wlr_log(WLR_ERROR, "failed to create wlr_renderer");
+    wlr_log(WLR_ERROR, "failed to create fx_renderer");
     return 1;
   }
 

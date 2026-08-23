@@ -2,7 +2,7 @@
 #include "nauka.h"
 
 #include <wlr/types/wlr_output_layout.h>
-#include <wlr/types/wlr_scene.h>
+#include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
 void arrange_windows(struct nauka_server *server) {

@@ -10,6 +10,7 @@ project(
 cc = meson.get_compiler('c')
 
 wayland_server = dependency('wayland-server')
+scenefx = dependency('scenefx-0.5')
 wlroots = dependency('wlroots-0.20')
 xkbcommon = dependency('xkbcommon')
 wayland_scanner = find_program('wayland-scanner')
@@ -20,6 +21,7 @@ inc = include_directories('include')
 add_project_arguments(
     '-DWLR_USE_UNSTABLE',
     '-Wno-unused-parameter',
+    '-Wno-pedantic',
     language: 'c',
 )
 
@@ -57,12 +59,14 @@ executable(
         'src/layout.c',
         'src/output.c',
         'src/pointer.c',
+        'src/rendering.c',
         'src/tags.c',
         'src/toplevel.c',
     ],
     include_directories: inc,
     dependencies: [
         wayland_server,
+        scenefx,
         wlroots,
         xkbcommon,
     ],

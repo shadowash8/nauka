@@ -1,6 +1,6 @@
 #include "toplevel.h"
 #include <wlr/types/wlr_input_device.h>
-#include <wlr/types/wlr_scene.h>
+#include <scenefx/types/wlr_scene.h>
 
 struct nauka_keyboard {
   struct wl_list link;

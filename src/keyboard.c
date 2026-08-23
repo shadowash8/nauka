@@ -8,7 +8,7 @@
 
 #include <wlr/backend/session.h>
 #include <wlr/types/wlr_keyboard.h>
-#include <wlr/types/wlr_scene.h>
+#include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
