@@ -369,9 +369,19 @@ void server_new_xdg_popup(struct wl_listener *listener, void *data) {
       wlr_xdg_surface_try_from_wlr_surface(xdg_popup->parent);
 
   if (parent_xdg != NULL) {
-    struct nauka_toplevel *parent_toplevel = parent_xdg->data;
-    if (parent_toplevel != NULL) {
-      parent_tree = parent_toplevel->scene_tree;
+    struct wlr_xdg_popup *parent_popup =
+        wlr_xdg_popup_try_from_wlr_surface(xdg_popup->parent);
+
+    if (parent_popup != NULL) {
+      /* nested popup: parent's base->data is the wlr_scene_tree created
+       * for that popup, not a nauka_toplevel */
+      parent_tree = parent_xdg->data;
+    } else {
+      /* parent is a real toplevel */
+      struct nauka_toplevel *parent_toplevel = parent_xdg->data;
+      if (parent_toplevel != NULL) {
+        parent_tree = parent_toplevel->scene_tree;
+      }
     }
   } else {
     struct wlr_layer_surface_v1 *parent_layer =
