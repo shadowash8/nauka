@@ -12,6 +12,7 @@
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
@@ -20,6 +21,7 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -97,6 +99,8 @@ int main(int argc, char *argv[]) {
   wlr_compositor_create(server.wl_display, 5, server.renderer);
   wlr_subcompositor_create(server.wl_display);
   wlr_data_device_manager_create(server.wl_display);
+  wlr_data_control_manager_v1_create(server.wl_display);
+  wlr_screencopy_manager_v1_create(server.wl_display);
 
   /* Creates an output layout, which a wlroots utility for working with an
    * arrangement of screens in a physical layout. */

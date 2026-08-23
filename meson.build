@@ -48,7 +48,7 @@ endforeach
 
 executable(
     'nauka',
-    [
+    generated + [
         'src/nauka.c',
         'src/config.c',
         'src/decoration.c',
