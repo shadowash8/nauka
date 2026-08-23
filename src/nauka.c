@@ -23,6 +23,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
@@ -155,6 +156,11 @@ int main(int argc, char *argv[]) {
   server.new_toplevel_decoration.notify = server_new_toplevel_decoration;
   wl_signal_add(&server.xdg_decoration_manager->events.new_toplevel_decoration,
                 &server.new_toplevel_decoration);
+
+  struct wlr_server_decoration_manager *server_decoration_manager =
+      wlr_server_decoration_manager_create(server.wl_display);
+  wlr_server_decoration_manager_set_default_mode(
+      server_decoration_manager, WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 
   /*
    * Creates a cursor, which is a wlroots utility for tracking the cursor
