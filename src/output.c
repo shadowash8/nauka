@@ -119,5 +119,7 @@ void server_new_output(struct wl_listener *listener, void *data) {
       wlr_scene_output_create(server->scene, wlr_output);
   wlr_scene_output_layout_add_output(server->scene_layout, l_output,
                                      scene_output);
+  wlr_scene_optimized_blur_set_size(server->blur_layer, wlr_output->width,
+                                    wlr_output->height);
   arrange_layers(output);
 }

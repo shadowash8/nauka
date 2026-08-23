@@ -36,6 +36,9 @@ struct nauka_config {
   int border_radius;
   float opacity_active;
   float opacity_inactive;
+  bool blur;
+  float blur_strength;
+  float blur_alpha;
 };
 
 void config_load(struct nauka_config *config);

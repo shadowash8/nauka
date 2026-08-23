@@ -32,6 +32,7 @@ struct nauka_server {
   struct wlr_scene_tree *bottom_tree;
   struct wlr_scene_tree *toplevel_tree;
   struct wlr_scene_tree *floating_tree;
+  struct wlr_scene_optimized_blur *blur_layer;
   struct wlr_scene_tree *top_tree;
   struct wlr_scene_tree *overlay_tree;
 

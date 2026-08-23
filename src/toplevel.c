@@ -48,6 +48,7 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
 
     wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
     toplevel_update_borders(toplevel);
+    toplevel_update_blur(toplevel);
     toplevel_update_opacity(toplevel,
                             toplevel == toplevel->server->focused_toplevel);
     focus_toplevel(toplevel);
@@ -67,6 +68,7 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
 
   wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
   toplevel_update_borders(toplevel);
+  toplevel_update_blur(toplevel);
   toplevel_update_opacity(toplevel,
                           toplevel == toplevel->server->focused_toplevel);
   focus_toplevel(toplevel);
@@ -144,6 +146,7 @@ static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
     wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, 0, 0);
   }
   toplevel_update_borders(toplevel);
+  toplevel_update_blur(toplevel);
   toplevel_update_opacity(toplevel,
                           toplevel == toplevel->server->focused_toplevel);
 }
@@ -291,7 +294,6 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
   toplevel->corner_radius = server->config.border_radius;
   toplevel->border_tree = wlr_scene_tree_create(toplevel->scene_tree);
   wlr_scene_node_lower_to_bottom(&toplevel->border_tree->node);
-  toplevel->corner_radius = server->config.border_radius;
 
   /* Listen to the various events it can emit */
   toplevel->map.notify = xdg_toplevel_map;

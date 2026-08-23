@@ -1,7 +1,9 @@
 #include "nauka.h"
 
 #include <scenefx/types/wlr_scene.h>
-#include <wlr/types/wlr_xdg_shell.h> // wlr_xdg_popup_try_from_wlr_surface
+#include <stdlib.h>
+#include <wlr/types/wlr_subcompositor.h>
+#include <wlr/types/wlr_xdg_shell.h>
 
 struct apply_radii_args {
   int32_t root_x;
@@ -9,6 +11,11 @@ struct apply_radii_args {
   int width;
   int height;
   int radius;
+};
+
+struct nauka_buffer_blur {
+  struct wlr_scene_blur *blur;
+  struct wl_listener destroy;
 };
 
 static void iter_buffer_set_corner_radii(struct wlr_scene_buffer *buffer,
@@ -63,17 +70,17 @@ static void toplevel_apply_content_radii(struct nauka_toplevel *toplevel,
 }
 
 void toplevel_update_borders(struct nauka_toplevel *toplevel) {
-  struct nauka_config *cfg = &toplevel->server->config;
+  struct nauka_config *config = &toplevel->server->config;
 
   struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
   int w = geo.width;
   int h = geo.height;
-  int bw = cfg->border_width;
+  int bw = config->border_width;
   int r = toplevel->corner_radius;
 
   if (toplevel->border == NULL) {
     toplevel->border = wlr_scene_rect_create(toplevel->border_tree, 0, 0,
-                                             cfg->border_color_inactive);
+                                             config->border_color_inactive);
   }
 
   /* outer rect covers window + border on all sides */
@@ -101,23 +108,87 @@ void toplevel_update_borders(struct nauka_toplevel *toplevel) {
 }
 
 void toplevel_set_border_color(struct nauka_toplevel *toplevel, bool active) {
-  struct nauka_config *cfg = &toplevel->server->config;
+  struct nauka_config *config = &toplevel->server->config;
   const float *color =
-      active ? cfg->border_color_active : cfg->border_color_inactive;
+      active ? config->border_color_active : config->border_color_inactive;
   if (toplevel->border != NULL) {
     wlr_scene_rect_set_color(toplevel->border, color);
   }
 }
 
-static void iter_buffer_set_opacity(struct wlr_scene_buffer *buffer, int lx,
-                                    int ly, void *data) {
-  float *opacity = data;
-  wlr_scene_buffer_set_opacity(buffer, *opacity);
+static void buffer_blur_handle_destroy(struct wl_listener *listener,
+                                       void *data) {
+  struct nauka_buffer_blur *bb = wl_container_of(listener, bb, destroy);
+  wl_list_remove(&bb->destroy.link);
+  free(bb);
+}
+
+static struct wlr_scene_blur *
+buffer_ensure_blur(struct wlr_scene_buffer *buffer) {
+  struct nauka_buffer_blur *bb = buffer->node.data;
+  if (bb != NULL) {
+    return bb->blur;
+  }
+
+  bb = calloc(1, sizeof(*bb));
+  bb->blur = wlr_scene_blur_create(buffer->node.parent, 1, 1);
+  wlr_scene_node_place_below(&bb->blur->node, &buffer->node);
+  wlr_scene_node_set_enabled(&bb->blur->node, false);
+
+  bb->destroy.notify = buffer_blur_handle_destroy;
+  wl_signal_add(&buffer->node.events.destroy, &bb->destroy);
+
+  buffer->node.data = bb;
+  return bb->blur;
+}
+
+static void iter_buffer_apply_effects(struct wlr_scene_buffer *buffer, int lx,
+                                      int ly, void *data) {
+  struct nauka_toplevel *toplevel = data;
+  struct nauka_config *config = &toplevel->server->config;
+
+  /* opacity applies to every buffer under this toplevel, popups included */
+  wlr_scene_buffer_set_opacity(buffer, toplevel->opacity);
+
+  struct wlr_scene_surface *scene_surface =
+      wlr_scene_surface_try_from_buffer(buffer);
+  if (scene_surface == NULL) {
+    return;
+  }
+  struct wlr_surface *surface = scene_surface->surface;
+
+  /* don't blur popups or subsurfaces -- only the toplevel's own main buffer */
+  if (wlr_xdg_popup_try_from_wlr_surface(surface) != NULL) {
+    return;
+  }
+  if (wlr_subsurface_try_from_wlr_surface(surface) != NULL) {
+    return;
+  }
+
+  struct wlr_scene_blur *blur = buffer_ensure_blur(buffer);
+
+  if (!config->blur) {
+    wlr_scene_node_set_enabled(&blur->node, false);
+    return;
+  }
+
+  wlr_scene_blur_set_size(blur, surface->current.width,
+                          surface->current.height);
+  wlr_scene_node_set_position(&blur->node, buffer->node.x, buffer->node.y);
+  wlr_scene_blur_set_strength(blur, config->blur_strength);
+  wlr_scene_blur_set_alpha(blur, config->blur_alpha);
+  wlr_scene_node_set_enabled(&blur->node, true);
 }
 
 void toplevel_update_opacity(struct nauka_toplevel *toplevel, bool active) {
-  struct nauka_config *cfg = &toplevel->server->config;
-  toplevel->opacity = active ? cfg->opacity_active : cfg->opacity_inactive;
+  struct nauka_config *config = &toplevel->server->config;
+  toplevel->opacity =
+      active ? config->opacity_active : config->opacity_inactive;
   wlr_scene_node_for_each_buffer(&toplevel->scene_tree->node,
-                                 iter_buffer_set_opacity, &toplevel->opacity);
+                                 iter_buffer_apply_effects, toplevel);
+}
+
+void toplevel_update_blur(struct nauka_toplevel *toplevel) {
+  wlr_scene_node_for_each_buffer(&toplevel->scene_tree->node,
+                                 iter_buffer_apply_effects, toplevel);
 }

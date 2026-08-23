@@ -129,6 +129,8 @@ int main(int argc, char *argv[]) {
   server.bottom_tree = wlr_scene_tree_create(&server.scene->tree);
   server.toplevel_tree = wlr_scene_tree_create(&server.scene->tree);
   server.floating_tree = wlr_scene_tree_create(&server.scene->tree);
+  server.blur_layer =
+      wlr_scene_optimized_blur_create(&server.scene->tree, 0, 0);
   server.top_tree = wlr_scene_tree_create(&server.scene->tree);
   server.overlay_tree = wlr_scene_tree_create(&server.scene->tree);
 
