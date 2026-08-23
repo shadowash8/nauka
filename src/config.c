@@ -25,7 +25,10 @@ static void config_set_defaults(struct nauka_config *config) {
   config->border_color_inactive[3] = 1.0f;
   config->outer_gap = 10;
   config->inner_gap = 10;
+
   config->border_radius = 12;
+  config->opacity_active = 1.0f;
+  config->opacity_inactive = 1.0f;
 }
 
 /* Parses "#rrggbb" or "#rrggbbaa" into a float[4] rgba. Returns false on
@@ -197,6 +200,20 @@ static void config_parse_line(struct nauka_config *config, char *line) {
     if (value != NULL) {
       config->border_radius = atoi(value);
     }
+    return;
+  }
+
+  if (strcmp(directive, "opacity_active") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->opacity_active = atof(value);
+    return;
+  }
+
+  if (strcmp(directive, "opacity_inactive") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->opacity_inactive = atof(value);
     return;
   }
 

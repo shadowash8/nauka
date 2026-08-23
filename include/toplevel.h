@@ -21,6 +21,7 @@ struct nauka_toplevel {
   bool is_fullscreen;
   bool floating;
   int corner_radius;
+  float opacity;
   struct wlr_scene_rect *border;
   struct wlr_box floating_geometry;
 };
@@ -48,3 +49,5 @@ void toplevel_begin_move(struct nauka_toplevel *toplevel);
 void toplevel_begin_resize(struct nauka_toplevel *toplevel, uint32_t edges);
 
 void toplevel_toggle_floating(struct nauka_toplevel *toplevel);
+
+void toplevel_apply_config(struct nauka_server *server);

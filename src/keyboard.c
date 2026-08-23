@@ -6,9 +6,9 @@
 
 #include <wayland-server-core.h>
 
+#include <scenefx/types/wlr_scene.h>
 #include <wlr/backend/session.h>
 #include <wlr/types/wlr_keyboard.h>
-#include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
@@ -47,6 +47,7 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
     if (it != toplevel) {
       wlr_xdg_toplevel_set_activated(it->xdg_toplevel, false);
       toplevel_set_border_color(it, false);
+      toplevel_update_opacity(it, false);
     }
   }
 
@@ -57,6 +58,7 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
 
   wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, true);
   toplevel_set_border_color(toplevel, true);
+  toplevel_update_opacity(toplevel, true);
 
   wlr_scene_node_raise_to_top(&toplevel->scene_tree->node);
 
@@ -115,6 +117,7 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
       case NAUKA_ACTION_RELOAD:
         config_reload(&server->config);
         arrange_windows(server);
+        toplevel_apply_config(server);
         break;
       case NAUKA_ACTION_CLOSE_ACTIVE: {
         struct wlr_surface *surface =

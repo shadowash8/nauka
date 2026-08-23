@@ -48,6 +48,8 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
 
     wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
     toplevel_update_borders(toplevel);
+    toplevel_update_opacity(toplevel,
+                            toplevel == toplevel->server->focused_toplevel);
     focus_toplevel(toplevel);
     /* deliberately skip arrange_windows() — floaters don't participate
      * in the tiling layout */
@@ -65,6 +67,8 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
 
   wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
   toplevel_update_borders(toplevel);
+  toplevel_update_opacity(toplevel,
+                          toplevel == toplevel->server->focused_toplevel);
   focus_toplevel(toplevel);
   arrange_windows(toplevel->server);
 }
@@ -140,6 +144,8 @@ static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
     wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, 0, 0);
   }
   toplevel_update_borders(toplevel);
+  toplevel_update_opacity(toplevel,
+                          toplevel == toplevel->server->focused_toplevel);
 }
 
 static void xdg_toplevel_destroy(struct wl_listener *listener, void *data) {
@@ -421,4 +427,14 @@ void toplevel_toggle_floating(struct nauka_toplevel *toplevel) {
   }
 
   arrange_windows(server);
+}
+
+void toplevel_apply_config(struct nauka_server *server) {
+  struct nauka_toplevel *toplevel;
+  wl_list_for_each(toplevel, &server->toplevels, link) {
+    toplevel->corner_radius = server->config.border_radius;
+    toplevel_update_borders(toplevel);
+    toplevel_update_opacity(toplevel,
+                            toplevel == toplevel->server->focused_toplevel);
+  }
 }

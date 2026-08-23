@@ -108,3 +108,16 @@ void toplevel_set_border_color(struct nauka_toplevel *toplevel, bool active) {
     wlr_scene_rect_set_color(toplevel->border, color);
   }
 }
+
+static void iter_buffer_set_opacity(struct wlr_scene_buffer *buffer, int lx,
+                                    int ly, void *data) {
+  float *opacity = data;
+  wlr_scene_buffer_set_opacity(buffer, *opacity);
+}
+
+void toplevel_update_opacity(struct nauka_toplevel *toplevel, bool active) {
+  struct nauka_config *cfg = &toplevel->server->config;
+  toplevel->opacity = active ? cfg->opacity_active : cfg->opacity_inactive;
+  wlr_scene_node_for_each_buffer(&toplevel->scene_tree->node,
+                                 iter_buffer_set_opacity, &toplevel->opacity);
+}
