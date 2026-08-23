@@ -9,30 +9,27 @@ static void layer_surface_handle_commit(struct wl_listener *listener,
                                         void *data) {
   struct nauka_layer_surface *layer_surface =
       wl_container_of(listener, layer_surface, commit);
-
   struct wlr_layer_surface_v1 *surface = layer_surface->layer_surface;
 
-  if (!surface->initialized) {
+  if (!surface->initialized)
     return;
-  }
 
   struct wlr_output *output = surface->output;
-
-  if (output == NULL) {
+  if (output == NULL)
     return;
-  }
 
   struct nauka_server *server = layer_surface->server;
 
-  struct wlr_box full_area = {0};
-  wlr_output_layout_get_box(server->output_layout, output, &full_area);
-  full_area.x = 0;
-  full_area.y = 0;
+  if (surface->initial_commit || surface->current.committed) {
+    struct wlr_box full_area = {0};
+    wlr_output_layout_get_box(server->output_layout, output, &full_area);
+    full_area.x = 0;
+    full_area.y = 0;
+    struct wlr_box usable_area = full_area;
 
-  struct wlr_box usable_area = full_area;
-
-  wlr_scene_layer_surface_v1_configure(layer_surface->scene_tree, &full_area,
-                                       &usable_area);
+    wlr_scene_layer_surface_v1_configure(layer_surface->scene_tree, &full_area,
+                                         &usable_area);
+  }
 }
 
 static void layer_surface_handle_map(struct wl_listener *listener, void *data) {
