@@ -403,7 +403,10 @@ void server_new_xdg_popup(struct wl_listener *listener, void *data) {
       wlr_xdg_surface_try_from_wlr_surface(xdg_popup->parent);
 
   if (parent_xdg != NULL) {
-    parent_tree = parent_xdg->data;
+    struct nauka_toplevel *parent_toplevel = parent_xdg->data;
+    if (parent_toplevel != NULL) {
+      parent_tree = parent_toplevel->scene_tree;
+    }
   } else {
     struct wlr_layer_surface_v1 *parent_layer =
         wlr_layer_surface_v1_try_from_wlr_surface(xdg_popup->parent);
