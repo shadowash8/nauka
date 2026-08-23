@@ -271,7 +271,13 @@ void server_cursor_button(struct wl_listener *listener, void *data) {
     /* If you released any buttons, we exit interactive move/resize mode. */
     wlr_seat_pointer_notify_button(server->seat, event->time_msec,
                                    event->button, event->state);
+    bool was_moving_or_resizing =
+        server->cursor_mode != NAUKA_CURSOR_PASSTHROUGH;
     reset_cursor_mode(server);
+
+    if (was_moving_or_resizing) {
+      arrange_windows(server);
+    }
     return;
   }
 
