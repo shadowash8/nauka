@@ -6,10 +6,10 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 void arrange_windows(struct nauka_server *server) {
-  struct wlr_box area = {0};
   struct nauka_output *output =
       wl_container_of(server->outputs.next, output, link);
-  wlr_output_layout_get_box(server->output_layout, output->wlr_output, &area);
+
+  struct wlr_box area = output->usable_area;
 
   int outer = server->config.outer_gap;
   int inner = server->config.inner_gap;

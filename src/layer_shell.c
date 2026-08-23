@@ -5,6 +5,38 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
+void arrange_layers(struct nauka_output *output) {
+  struct wlr_box full_area = {0};
+  wlr_output_layout_get_box(output->server->output_layout, output->wlr_output,
+                            &full_area);
+  full_area.x = 0;
+  full_area.y = 0;
+
+  output->usable_area = full_area;
+
+  struct nauka_layer_surface *ls;
+
+  /* exclusive-zone surfaces reserve space first */
+  wl_list_for_each(ls, &output->layers, link) {
+    if (!ls->layer_surface->initialized)
+      continue;
+    if (ls->layer_surface->current.exclusive_zone <= 0)
+      continue;
+    wlr_scene_layer_surface_v1_configure(ls->scene_tree, &full_area,
+                                         &output->usable_area);
+  }
+
+  /* everyone else just gets positioned within whatever's left */
+  wl_list_for_each(ls, &output->layers, link) {
+    if (!ls->layer_surface->initialized)
+      continue;
+    if (ls->layer_surface->current.exclusive_zone > 0)
+      continue;
+    wlr_scene_layer_surface_v1_configure(ls->scene_tree, &full_area,
+                                         &output->usable_area);
+  }
+}
+
 static void layer_surface_handle_commit(struct wl_listener *listener,
                                         void *data) {
   struct nauka_layer_surface *layer_surface =
@@ -14,21 +46,13 @@ static void layer_surface_handle_commit(struct wl_listener *listener,
   if (!surface->initialized)
     return;
 
-  struct wlr_output *output = surface->output;
+  struct nauka_output *output = surface->output->data;
   if (output == NULL)
     return;
 
-  struct nauka_server *server = layer_surface->server;
-
   if (surface->initial_commit || surface->current.committed) {
-    struct wlr_box full_area = {0};
-    wlr_output_layout_get_box(server->output_layout, output, &full_area);
-    full_area.x = 0;
-    full_area.y = 0;
-    struct wlr_box usable_area = full_area;
-
-    wlr_scene_layer_surface_v1_configure(layer_surface->scene_tree, &full_area,
-                                         &usable_area);
+    arrange_layers(output);
+    arrange_windows(layer_surface->server);
   }
 }
 
@@ -44,6 +68,15 @@ static void layer_surface_handle_map(struct wl_listener *listener, void *data) {
       ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE) {
     seat_focus_surface(layer_surface->server,
                        layer_surface->layer_surface->surface);
+  }
+
+  struct wlr_layer_surface_v1 *surface = layer_surface->layer_surface;
+  if (surface->output != NULL) {
+    struct nauka_output *output = surface->output->data;
+    if (output != NULL) {
+      arrange_layers(output);
+      arrange_windows(layer_surface->server);
+    }
   }
 }
 
@@ -68,6 +101,14 @@ static void layer_surface_handle_unmap(struct wl_listener *listener,
       focus_toplevel(top);
     }
   }
+
+  struct nauka_output *output = layer_surface->layer_surface->output
+                                    ? layer_surface->layer_surface->output->data
+                                    : NULL;
+  if (output != NULL) {
+    arrange_layers(output);
+    arrange_windows(server);
+  }
 }
 
 static void layer_surface_handle_output_destroy(struct wl_listener *listener,
@@ -88,6 +129,7 @@ static void layer_surface_handle_destroy(struct wl_listener *listener,
   struct nauka_layer_surface *layer_surface =
       wl_container_of(listener, layer_surface, destroy);
 
+  wl_list_remove(&layer_surface->link);
   wl_list_remove(&layer_surface->commit.link);
   wl_list_remove(&layer_surface->map.link);
   wl_list_remove(&layer_surface->unmap.link);
@@ -199,6 +241,9 @@ void server_new_layer_surface(struct wl_listener *listener, void *data) {
   layer_surface->output_destroy.notify = layer_surface_handle_output_destroy;
   wl_signal_add(&wlr_layer_surface->output->events.destroy,
                 &layer_surface->output_destroy);
+
+  struct nauka_output *nauka_out = wlr_layer_surface->output->data;
+  wl_list_insert(&nauka_out->layers, &layer_surface->link);
 
   layer_surface->commit.notify = layer_surface_handle_commit;
   wl_signal_add(&wlr_layer_surface->surface->events.commit,

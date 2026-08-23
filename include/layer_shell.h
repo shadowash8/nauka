@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_scene.h>
 
 struct nauka_server;
+struct nauka_output;
 
 struct nauka_layer_surface {
   struct nauka_server *server;
@@ -13,6 +14,7 @@ struct nauka_layer_surface {
   struct wlr_surface *surface;
   struct wlr_scene_layer_surface_v1 *scene_tree;
 
+  struct wl_list link;
   struct wl_listener commit;
   struct wl_listener map;
   struct wl_listener unmap;
@@ -22,5 +24,7 @@ struct nauka_layer_surface {
 
   bool mapped;
 };
+
+void arrange_layers(struct nauka_output *output);
 
 void server_new_layer_surface(struct wl_listener *listener, void *data);

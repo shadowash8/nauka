@@ -84,6 +84,8 @@ void server_new_output(struct wl_listener *listener, void *data) {
   struct nauka_output *output = calloc(1, sizeof(*output));
   output->wlr_output = wlr_output;
   output->server = server;
+  wl_list_init(&output->layers);
+  wlr_output->data = output;
 
   /* Sets up a listener for the frame event. */
   output->frame.notify = output_frame;
@@ -108,10 +110,12 @@ void server_new_output(struct wl_listener *listener, void *data) {
    * display, which Wayland clients can see to find out information about the
    * output (such as DPI, scale factor, manufacturer, etc).
    */
+  wl_list_insert(&server->outputs, &output->link);
   struct wlr_output_layout_output *l_output =
       wlr_output_layout_add_auto(server->output_layout, wlr_output);
   struct wlr_scene_output *scene_output =
       wlr_scene_output_create(server->scene, wlr_output);
   wlr_scene_output_layout_add_output(server->scene_layout, l_output,
                                      scene_output);
+  arrange_layers(output);
 }
