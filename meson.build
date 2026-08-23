@@ -72,3 +72,7 @@ executable(
     ],
     install: true,
 )
+
+install_data('default.conf', install_dir: get_option('datadir') / 'ashwc')
+install_data('LICENSE', install_dir: get_option('datadir') / 'licenses/ashwc')
+install_data('nauka.desktop', install_dir: get_option('datadir') / 'wayland-sessions')
