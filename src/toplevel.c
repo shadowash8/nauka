@@ -18,25 +18,19 @@ void toplevel_update_borders(struct nauka_toplevel *toplevel) {
 
   /* Top */
   wlr_scene_rect_set_size(toplevel->border[0], w + 2 * bw, bw);
-
-  wlr_scene_node_set_position(&toplevel->border[0]->node, geo.x - bw,
-                              geo.y - bw);
+  wlr_scene_node_set_position(&toplevel->border[0]->node, -bw, -bw);
 
   /* Bottom */
   wlr_scene_rect_set_size(toplevel->border[1], w + 2 * bw, bw);
-
-  wlr_scene_node_set_position(&toplevel->border[1]->node, geo.x - bw,
-                              geo.y + h);
+  wlr_scene_node_set_position(&toplevel->border[1]->node, -bw, h);
 
   /* Left */
   wlr_scene_rect_set_size(toplevel->border[2], bw, h);
-
-  wlr_scene_node_set_position(&toplevel->border[2]->node, geo.x - bw, geo.y);
+  wlr_scene_node_set_position(&toplevel->border[2]->node, -bw, 0);
 
   /* Right */
   wlr_scene_rect_set_size(toplevel->border[3], bw, h);
-
-  wlr_scene_node_set_position(&toplevel->border[3]->node, geo.x + w, geo.y);
+  wlr_scene_node_set_position(&toplevel->border[3]->node, w, 0);
 }
 
 void toplevel_set_border_color(struct nauka_toplevel *toplevel, bool active) {
