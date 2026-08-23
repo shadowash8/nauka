@@ -18,6 +18,7 @@ struct nauka_toplevel {
   struct wlr_scene_rect *border[4];
 
   int tag;
+  bool is_fullscreen;
 };
 
 struct nauka_popup {

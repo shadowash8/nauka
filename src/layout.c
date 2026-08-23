@@ -18,8 +18,21 @@ void arrange_windows(struct nauka_server *server) {
   area.width -= outer * 2;
   area.height -= outer * 2;
 
-  int n = 0;
   struct nauka_toplevel *t;
+  wl_list_for_each(t, &server->toplevels, link) {
+    if (t->tag != server->current_tag)
+      continue;
+
+    if (t->is_fullscreen) {
+      wlr_scene_node_set_position(&t->scene_tree->node, output->usable_area.x,
+                                  output->usable_area.y);
+      wlr_xdg_toplevel_set_size(t->xdg_toplevel, output->usable_area.width,
+                                output->usable_area.height);
+      return;
+    }
+  }
+
+  int n = 0;
   wl_list_for_each(t, &server->toplevels, link) {
     if (t->tag == server->current_tag)
       n++;

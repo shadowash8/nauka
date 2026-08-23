@@ -246,12 +246,11 @@ static void xdg_toplevel_request_maximize(struct wl_listener *listener,
 
 static void xdg_toplevel_request_fullscreen(struct wl_listener *listener,
                                             void *data) {
-  /* Just as with request_maximize, we must send a configure here. */
-  struct nauka_toplevel *toplevel =
-      wl_container_of(listener, toplevel, request_fullscreen);
-  if (toplevel->xdg_toplevel->base->initialized) {
-    wlr_xdg_surface_schedule_configure(toplevel->xdg_toplevel->base);
-  }
+  struct nauka_toplevel *t = wl_container_of(listener, t, request_fullscreen);
+
+  t->is_fullscreen = t->xdg_toplevel->requested.fullscreen;
+  wlr_xdg_toplevel_set_fullscreen(t->xdg_toplevel, t->is_fullscreen);
+  arrange_windows(t->server);
 }
 
 void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
