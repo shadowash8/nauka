@@ -142,6 +142,29 @@ buffer_ensure_blur(struct wlr_scene_buffer *buffer) {
   return bb->blur;
 }
 
+static struct fx_corner_radii compute_edge_radii(int32_t root_x, int32_t root_y,
+                                                 int lx, int ly, int surf_w,
+                                                 int surf_h, int width,
+                                                 int height, int radius) {
+  int32_t x = lx - root_x;
+  int32_t y = ly - root_y;
+
+  struct fx_corner_radii corners = corner_radii_none();
+  if (x == 0 && y == 0) {
+    corners.top_left = radius;
+  }
+  if (x == 0 && y + surf_h == height) {
+    corners.bottom_left = radius;
+  }
+  if (x + surf_w == width && y == 0) {
+    corners.top_right = radius;
+  }
+  if (x + surf_w == width && y + surf_h == height) {
+    corners.bottom_right = radius;
+  }
+  return corners;
+}
+
 static void iter_buffer_apply_effects(struct wlr_scene_buffer *buffer, int lx,
                                       int ly, void *data) {
   struct nauka_toplevel *toplevel = data;
@@ -177,6 +200,19 @@ static void iter_buffer_apply_effects(struct wlr_scene_buffer *buffer, int lx,
   wlr_scene_node_set_position(&blur->node, buffer->node.x, buffer->node.y);
   wlr_scene_blur_set_strength(blur, config->blur_strength);
   wlr_scene_blur_set_alpha(blur, config->blur_alpha);
+
+  /* clip the blur to match the windows's rounded corners */
+  struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
+  int bw = config->border_width;
+  int inner_r = toplevel->corner_radius - bw;
+  if (inner_r < 0)
+    inner_r = 0;
+  struct fx_corner_radii corners = compute_edge_radii(
+      toplevel->scene_tree->node.x, toplevel->scene_tree->node.y, lx, ly,
+      surface->current.width, surface->current.height, geo.width, geo.height,
+      inner_r);
+  wlr_scene_blur_set_corner_radii(blur, corners);
+
   wlr_scene_node_set_enabled(&blur->node, true);
 }
 
