@@ -34,6 +34,8 @@ void arrange_windows(struct nauka_server *server) {
 
   int n = 0;
   wl_list_for_each(t, &server->toplevels, link) {
+    if (t->floating || !toplevel_is_visible(t))
+      continue;
     if (t->tag == server->current_tag)
       n++;
   }
@@ -48,7 +50,7 @@ void arrange_windows(struct nauka_server *server) {
 
   int i = 0;
   wl_list_for_each(t, &server->toplevels, link) {
-    if (t->tag != server->current_tag)
+    if (t->tag != server->current_tag || t->floating)
       continue;
 
     int col = i % cols;

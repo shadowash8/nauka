@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/util/box.h>
 #include <wlr/util/edges.h>
 
 void toplevel_update_borders(struct nauka_toplevel *toplevel) {
@@ -46,9 +47,9 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
   struct nauka_toplevel *toplevel = wl_container_of(listener, toplevel, map);
 
-  wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
+  /* Set toplevel tag to current focused tag */
+  toplevel->tag = toplevel->server->current_tag;
 
-  /* Center the new toplevel on the output it'll first appear on. */
   struct wlr_box box = {0};
   struct wlr_output *output = wlr_output_layout_output_at(
       toplevel->server->output_layout, toplevel->server->cursor->x,
@@ -57,9 +58,38 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
     wlr_output_layout_get_box(toplevel->server->output_layout, output, &box);
   }
 
-  /* Set toplevel tag to current focused tag */
-  toplevel->tag = toplevel->server->current_tag;
+  if (toplevel->floating) {
+    wlr_scene_node_reparent(&toplevel->scene_tree->node,
+                            toplevel->server->floating_tree);
 
+    int width = box.width / 2;
+    int height = box.height / 2;
+
+    toplevel->floating_geometry = (struct wlr_box){
+        .x = box.x + (box.width - width) / 2,
+        .y = box.y + (box.height - height) / 2,
+        .width = width,
+        .height = height,
+    };
+
+    wlr_scene_node_set_position(&toplevel->scene_tree->node,
+                                toplevel->floating_geometry.x,
+                                toplevel->floating_geometry.y);
+
+    /* actually request this size from the client — without this, only
+     * the scene node moves, and the surface keeps whatever size it
+     * initially committed */
+    wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, width, height);
+
+    wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
+    toplevel_update_borders(toplevel);
+    focus_toplevel(toplevel);
+    /* deliberately skip arrange_windows() — floaters don't participate
+     * in the tiling layout */
+    return;
+  }
+
+  /* Center the new toplevel on the output it'll first appear on. */
   struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
   int width = geo.width > 0 ? geo.width : box.width;
   int height = geo.height > 0 ? geo.height : box.height;
@@ -68,6 +98,7 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
                               box.x + (box.width - width) / 2,
                               box.y + (box.height - height) / 2);
 
+  wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
   toplevel_update_borders(toplevel);
   focus_toplevel(toplevel);
   arrange_windows(toplevel->server);
@@ -119,6 +150,18 @@ static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
   arrange_windows(server);
 }
 
+static bool toplevel_should_float(struct nauka_toplevel *toplevel) {
+  struct wlr_xdg_toplevel *t = toplevel->xdg_toplevel;
+  bool fixed_size = t->current.max_width && t->current.max_height &&
+                    t->current.max_width == t->current.min_width &&
+                    t->current.max_height == t->current.min_height;
+  return fixed_size || t->parent != NULL;
+}
+
+bool toplevel_is_visible(struct nauka_toplevel *toplevel) {
+  return toplevel->tag == toplevel->server->current_tag;
+}
+
 static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
   /* Called when a new surface state is committed. */
   struct nauka_toplevel *toplevel = wl_container_of(listener, toplevel, commit);
@@ -128,6 +171,7 @@ static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
      * reply with a configure so the client can map the surface. nauka
      * configures the xdg_toplevel with 0,0 size to let the client pick the
      * dimensions itself. */
+    toplevel->floating = toplevel_should_float(toplevel);
     wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, 0, 0);
   }
   toplevel_update_borders(toplevel);
@@ -148,10 +192,6 @@ static void xdg_toplevel_destroy(struct wl_listener *listener, void *data) {
   wl_list_remove(&toplevel->request_fullscreen.link);
 
   free(toplevel);
-}
-
-bool toplevel_is_visible(struct nauka_toplevel *toplevel) {
-  return toplevel->tag == toplevel->server->current_tag;
 }
 
 void update_toplevel_visibility(struct nauka_server *server) {
@@ -205,26 +245,28 @@ void toplevel_begin_resize(struct nauka_toplevel *toplevel, uint32_t edges) {
 
 static void xdg_toplevel_request_move(struct wl_listener *listener,
                                       void *data) {
-  /* This event is raised when a client would like to begin an interactive
-   * move, typically because the user clicked on their client-side
-   * decorations. Note that a more sophisticated compositor should check the
-   * provided serial against a list of button press serials sent to this
-   * client, to prevent the client from requesting this whenever they want. */
   struct nauka_toplevel *toplevel =
       wl_container_of(listener, toplevel, request_move);
+
+  if (!toplevel->floating) {
+    toplevel->floating = true;
+    wlr_scene_node_reparent(&toplevel->scene_tree->node,
+                            toplevel->server->floating_tree);
+    arrange_windows(toplevel->server); /* re-flow remaining tiled windows */
+  }
+
   begin_interactive(toplevel, NAUKA_CURSOR_MOVE, 0);
 }
 
 static void xdg_toplevel_request_resize(struct wl_listener *listener,
                                         void *data) {
-  /* This event is raised when a client would like to begin an interactive
-   * resize, typically because the user clicked on their client-side
-   * decorations. Note that a more sophisticated compositor should check the
-   * provided serial against a list of button press serials sent to this
-   * client, to prevent the client from requesting this whenever they want. */
   struct wlr_xdg_toplevel_resize_event *event = data;
   struct nauka_toplevel *toplevel =
       wl_container_of(listener, toplevel, request_resize);
+
+  if (!toplevel->floating)
+    return; /* tiled windows resize via arrange_windows, not drag */
+
   begin_interactive(toplevel, NAUKA_CURSOR_RESIZE, event->edges);
 }
 
@@ -383,4 +425,39 @@ void server_new_xdg_popup(struct wl_listener *listener, void *data) {
 
   popup->destroy.notify = xdg_popup_destroy;
   wl_signal_add(&xdg_popup->events.destroy, &popup->destroy);
+}
+
+void toplevel_toggle_floating(struct nauka_toplevel *toplevel) {
+  struct nauka_server *server = toplevel->server;
+  toplevel->floating = !toplevel->floating;
+
+  if (toplevel->floating) {
+    wlr_scene_node_reparent(&toplevel->scene_tree->node, server->floating_tree);
+
+    struct wlr_output *output = wlr_output_layout_output_at(
+        server->output_layout, server->cursor->x, server->cursor->y);
+    struct wlr_box box = {0};
+    if (output != NULL) {
+      wlr_output_layout_get_box(server->output_layout, output, &box);
+    }
+
+    int width = box.width / 2;
+    int height = box.height / 2;
+
+    toplevel->floating_geometry = (struct wlr_box){
+        .x = box.x + (box.width - width) / 2,
+        .y = box.y + (box.height - height) / 2,
+        .width = width,
+        .height = height,
+    };
+
+    wlr_scene_node_set_position(&toplevel->scene_tree->node,
+                                toplevel->floating_geometry.x,
+                                toplevel->floating_geometry.y);
+    wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, width, height);
+  } else {
+    wlr_scene_node_reparent(&toplevel->scene_tree->node, server->toplevel_tree);
+  }
+
+  arrange_windows(server);
 }

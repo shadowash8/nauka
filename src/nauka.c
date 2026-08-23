@@ -127,6 +127,7 @@ int main(int argc, char *argv[]) {
   server.background_tree = wlr_scene_tree_create(&server.scene->tree);
   server.bottom_tree = wlr_scene_tree_create(&server.scene->tree);
   server.toplevel_tree = wlr_scene_tree_create(&server.scene->tree);
+  server.floating_tree = wlr_scene_tree_create(&server.scene->tree);
   server.top_tree = wlr_scene_tree_create(&server.scene->tree);
   server.overlay_tree = wlr_scene_tree_create(&server.scene->tree);
 

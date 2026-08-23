@@ -9,6 +9,7 @@ enum nauka_keybind_action {
   NAUKA_ACTION_NEXT_TOPLEVEL,
   NAUKA_ACTION_VIEW_TAG,
   NAUKA_ACTION_MOVE_FOCUSED_TO_TAG,
+  NAUKA_ACTION_TOGGLE_FLOATING,
 };
 
 struct nauka_keybind {

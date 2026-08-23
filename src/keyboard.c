@@ -191,6 +191,12 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
       case NAUKA_ACTION_MOVE_FOCUSED_TO_TAG:
         move_focused_to_tag(server, kb->tag);
         break;
+      case NAUKA_ACTION_TOGGLE_FLOATING: {
+        if (server->focused_toplevel != NULL) {
+          toplevel_toggle_floating(server->focused_toplevel);
+        }
+        break;
+      }
       }
 
       handled = true;
