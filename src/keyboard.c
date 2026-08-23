@@ -188,8 +188,8 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
       case NAUKA_ACTION_VIEW_TAG:
         view_tag(server, kb->tag);
         break;
-      case NAUKA_ACTION_MOVE_FOCUS_TO_TAG:
-        move_focus_to_tag(server, kb->tag);
+      case NAUKA_ACTION_MOVE_FOCUSED_TO_TAG:
+        move_focused_to_tag(server, kb->tag);
         break;
       }
 

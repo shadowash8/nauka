@@ -255,8 +255,8 @@ static void config_parse_line(struct nauka_config *config, char *line) {
   } else if (strcasecmp(action_str, "view_tag") == 0) {
     kb->action = NAUKA_ACTION_VIEW_TAG;
     kb->tag = keysym - XKB_KEY_1;
-  } else if (strcasecmp(action_str, "move_focus_to_tag") == 0) {
-    kb->action = NAUKA_ACTION_MOVE_FOCUS_TO_TAG;
+  } else if (strcasecmp(action_str, "move_focused_to_tag") == 0) {
+    kb->action = NAUKA_ACTION_MOVE_FOCUSED_TO_TAG;
     kb->tag = keysym - XKB_KEY_1;
   } else {
     free(kb);
