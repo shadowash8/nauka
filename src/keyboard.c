@@ -207,20 +207,17 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
   struct wlr_seat *seat = server->seat;
 
   uint32_t keycode = event->keycode + 8;
-  const xkb_keysym_t *syms;
-  int nsyms =
-      xkb_state_key_get_syms(keyboard->wlr_keyboard->xkb_state, keycode, &syms);
+
+  const xkb_keysym_t *live_syms;
+  int live_nsyms = xkb_state_key_get_syms(keyboard->wlr_keyboard->xkb_state,
+                                          keycode, &live_syms);
 
   if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
     uint32_t mods = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
-
     if ((mods & (WLR_MODIFIER_CTRL | WLR_MODIFIER_ALT)) ==
         (WLR_MODIFIER_CTRL | WLR_MODIFIER_ALT)) {
-
-      xkb_keysym_t sym = xkb_keysym_to_lower(syms[0]);
-
+      xkb_keysym_t sym = xkb_keysym_to_lower(live_syms[0]);
       if (sym >= XKB_KEY_XF86Switch_VT_1 && sym <= XKB_KEY_XF86Switch_VT_12) {
-
         unsigned vt = sym - XKB_KEY_XF86Switch_VT_1 + 1;
         wlr_session_change_vt(server->session, vt);
         return;
@@ -228,10 +225,18 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
     }
   }
 
+  struct xkb_keymap *keymap =
+      xkb_state_get_keymap(keyboard->wlr_keyboard->xkb_state);
+  xkb_layout_index_t layout =
+      xkb_state_key_get_layout(keyboard->wlr_keyboard->xkb_state, keycode);
+  const xkb_keysym_t *bind_syms;
+  int bind_nsyms =
+      xkb_keymap_key_get_syms_by_level(keymap, keycode, layout, 0, &bind_syms);
+
   bool handled = false;
   uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->wlr_keyboard);
   if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-    handled = try_keybindings(server, modifiers, syms, nsyms);
+    handled = try_keybindings(server, modifiers, bind_syms, bind_nsyms);
   }
 
   if (!handled) {
@@ -239,6 +244,8 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
     wlr_seat_keyboard_notify_key(seat, event->time_msec, event->keycode,
                                  event->state);
   }
+
+  (void)live_nsyms;
 }
 
 static void keyboard_handle_destroy(struct wl_listener *listener, void *data) {
