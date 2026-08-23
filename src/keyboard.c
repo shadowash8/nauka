@@ -54,8 +54,6 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
   toplevel_set_border_color(toplevel, true);
 
   wlr_scene_node_raise_to_top(&toplevel->scene_tree->node);
-  wl_list_remove(&toplevel->link);
-  wl_list_insert(&server->toplevels, &toplevel->link);
 
   seat_focus_surface(server, toplevel->xdg_toplevel->base->surface);
 }
@@ -125,13 +123,63 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         }
         break;
       }
-      case NAUKA_ACTION_NEXT_TOPLEVEL:
-        if (wl_list_length(&server->toplevels) >= 2) {
-          struct nauka_toplevel *next_toplevel =
-              wl_container_of(server->toplevels.prev, next_toplevel, link);
-          focus_toplevel(next_toplevel);
+      case NAUKA_ACTION_NEXT_TOPLEVEL: {
+        if (wl_list_empty(&server->toplevels)) {
+          break;
+        }
+
+        struct nauka_toplevel *focused = NULL;
+        struct nauka_toplevel *it;
+
+        wl_list_for_each(it, &server->toplevels, link) {
+          if (it->xdg_toplevel->current.activated) {
+            focused = it;
+            break;
+          }
+        }
+
+        if (focused == NULL) {
+          /* nothing focused, just grab the first one on the current tag */
+          wl_list_for_each(it, &server->toplevels, link) {
+            if (it->tag == server->current_tag) {
+              focus_toplevel(it);
+              break;
+            }
+          }
+          break;
+        }
+
+        struct nauka_toplevel *next = NULL;
+        bool past_focused = false;
+
+        wl_list_for_each(it, &server->toplevels, link) {
+          if (it == focused) {
+            past_focused = true;
+            continue;
+          }
+          if (past_focused && it->tag == server->current_tag) {
+            next = it;
+            break;
+          }
+        }
+
+        if (next == NULL) {
+          wl_list_for_each(it, &server->toplevels, link) {
+            if (it == focused) {
+              break;
+            }
+            if (it->tag == server->current_tag) {
+              next = it;
+              break;
+            }
+          }
+        }
+
+        if (next != NULL && next != focused) {
+          focus_toplevel(next);
         }
         break;
+      }
       case NAUKA_ACTION_VIEW_TAG:
         view_tag(server, kb->tag);
         break;
