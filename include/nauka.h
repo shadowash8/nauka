@@ -67,4 +67,11 @@ struct nauka_server {
 
   struct nauka_config config;
   int current_tag;
+
+  struct wlr_ext_workspace_manager_v1 *workspace_manager;
+  struct wlr_ext_workspace_group_handle_v1 *workspace_group;
+  struct wlr_ext_workspace_handle_v1 *workspaces[NAUKA_TAG_COUNT];
+
+  struct wl_listener workspace_manager_commit;
+  struct wl_listener workspace_manager_destroy;
 };

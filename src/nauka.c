@@ -6,7 +6,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
@@ -16,6 +15,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
@@ -114,6 +114,12 @@ int main(int argc, char *argv[]) {
   wl_list_init(&server.outputs);
   server.new_output.notify = server_new_output;
   wl_signal_add(&server.backend->events.new_output, &server.new_output);
+
+  /* Load config before anything that uses config */
+  config_load(&server.config);
+
+  /* Initialize fixed tags + ext-workspace-v1 */
+  tags_init(&server);
 
   /* Create a scene graph. This is a wlroots abstraction that handles all
    * rendering and damage tracking. All the compositor author needs to do
@@ -237,10 +243,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  /* Load config file on boot */
-  config_load(&server.config);
-  server.current_tag = 0;
-
   /* Set the WAYLAND_DISPLAY environment variable to our socket and run the
    * startup command if requested. */
   setenv("WAYLAND_DISPLAY", socket, true);
@@ -249,6 +251,9 @@ int main(int argc, char *argv[]) {
       execl("/bin/sh", "/bin/sh", "-c", startup_cmd, (void *)NULL);
     }
   }
+
+  config_run_autostart(&server.config);
+
   /* Run the Wayland event loop. This does not return until you exit the
    * compositor. Starting the backend rigged up all of the necessary event
    * loop configuration to listen to libinput events, DRM events, generate

@@ -14,6 +14,7 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
 
   /* Set toplevel tag to current focused tag */
   toplevel->tag = toplevel->server->current_tag;
+  workspace_update_hidden(toplevel->server, toplevel->tag);
 
   struct wlr_box box = {0};
   struct wlr_output *output = wlr_output_layout_output_at(

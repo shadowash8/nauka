@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include <scenefx/types/wlr_scene.h>
+#include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 
@@ -41,6 +42,9 @@ static void output_destroy(struct wl_listener *listener, void *data) {
   (void)data;
 
   struct nauka_output *output = wl_container_of(listener, output, destroy);
+
+  wlr_ext_workspace_group_handle_v1_output_leave(
+      output->server->workspace_group, output->wlr_output);
 
   output->wlr_output->data = NULL;
 
@@ -112,7 +116,6 @@ void server_new_output(struct wl_listener *listener, void *data) {
    * display, which Wayland clients can see to find out information about the
    * output (such as DPI, scale factor, manufacturer, etc).
    */
-  wl_list_insert(&server->outputs, &output->link);
   struct wlr_output_layout_output *l_output =
       wlr_output_layout_add_auto(server->output_layout, wlr_output);
   struct wlr_scene_output *scene_output =
@@ -121,5 +124,7 @@ void server_new_output(struct wl_listener *listener, void *data) {
                                      scene_output);
   wlr_scene_optimized_blur_set_size(server->blur_layer, wlr_output->width,
                                     wlr_output->height);
+  wlr_ext_workspace_group_handle_v1_output_enter(server->workspace_group,
+                                                 wlr_output);
   arrange_layers(output);
 }
