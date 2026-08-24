@@ -133,6 +133,11 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         break;
       }
       case NAUKA_ACTION_NEXT_TOPLEVEL: {
+        if (server->focused_toplevel != NULL &&
+            server->focused_toplevel->is_fullscreen) {
+          break; /* don't cycle focus while fullscreen */
+        }
+
         if (wl_list_empty(&server->toplevels)) {
           break;
         }
