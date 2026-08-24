@@ -21,6 +21,11 @@ struct nauka_keybind {
   int tag;
 };
 
+struct nauka_autostart {
+  char *command;
+  struct nauka_autostart *next;
+};
+
 struct nauka_config {
   uint32_t mod;
   uint32_t move_button;
@@ -39,9 +44,12 @@ struct nauka_config {
   bool blur;
   float blur_strength;
   float blur_alpha;
+
+  struct nauka_autostart *autostart;
 };
 
 void parse_file(struct nauka_config *config, const char *path);
+void config_run_autostart(struct nauka_config *config);
 void config_load(struct nauka_config *config);
 void config_reload(struct nauka_config *config);
 void config_destroy(struct nauka_config *config);

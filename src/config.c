@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <unistd.h>
 #include <wlr/types/wlr_keyboard.h>
 
 static void config_set_defaults(struct nauka_config *config) {
@@ -221,6 +222,28 @@ static void config_parse_line(struct nauka_config *config, char *line,
     return;
   }
 
+  if (strcmp(directive, "run") == 0) {
+    char *rest = skip_ws(cursor);
+
+    size_t len = strlen(rest);
+    while (len > 0 && (rest[len - 1] == ' ' || rest[len - 1] == '\t'))
+      rest[--len] = '\0';
+
+    if (len >= 2 && rest[0] == '"' && rest[len - 1] == '"') {
+      rest[len - 1] = '\0';
+      rest++;
+    }
+
+    if (*rest) {
+      struct nauka_autostart *a = calloc(1, sizeof(*a));
+      a->command = strdup(rest);
+      a->next = config->autostart;
+      config->autostart = a;
+    }
+
+    return;
+  }
+
   if (strcmp(directive, "border_width") == 0) {
     char *value = next_token(&cursor);
     if (value != NULL) {
@@ -385,6 +408,15 @@ static void config_parse_line(struct nauka_config *config, char *line,
   config->keybinds = kb;
 }
 
+void config_run_autostart(struct nauka_config *config) {
+  for (struct nauka_autostart *a = config->autostart; a; a = a->next) {
+    if (fork() == 0) {
+      execl("/bin/sh", "sh", "-c", a->command, (char *)NULL);
+      _exit(1);
+    }
+  }
+}
+
 void config_load(struct nauka_config *config) {
   config_set_defaults(config);
 
@@ -455,4 +487,13 @@ void config_destroy(struct nauka_config *config) {
     kb = next;
   }
   config->keybinds = NULL;
+
+  struct nauka_autostart *a = config->autostart;
+  while (a) {
+    struct nauka_autostart *next = a->next;
+    free(a->command);
+    free(a);
+    a = next;
+  }
+  config->autostart = NULL;
 }
