@@ -1,6 +1,9 @@
 #include "config.h"
 
+#include <libgen.h>
+#include <limits.h>
 #include <linux/input-event-codes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,6 +65,47 @@ static bool parse_hex_color(const char *value, float out[4]) {
   out[1] = g / 255.0f;
   out[2] = b / 255.0f;
   out[3] = a / 255.0f;
+  return true;
+}
+
+struct imported_file {
+  char path[PATH_MAX];
+  struct imported_file *next;
+};
+
+static struct imported_file *imports = NULL;
+
+static bool already_imported(const char *path) {
+  for (struct imported_file *it = imports; it; it = it->next) {
+    if (strcmp(it->path, path) == 0)
+      return true;
+  }
+  return false;
+}
+
+static void mark_imported(const char *path) {
+  struct imported_file *f = calloc(1, sizeof(*f));
+  strcpy(f->path, path);
+  f->next = imports;
+  imports = f;
+}
+
+static bool expand_path(const char *input, const char *current_dir, char *out) {
+  if (input[0] == '/') {
+    snprintf(out, PATH_MAX, "%s", input);
+  } else if (input[0] == '~' && input[1] == '/') {
+    const char *home = getenv("HOME");
+    if (!home)
+      return false;
+    snprintf(out, PATH_MAX, "%s/%s", home, input + 2);
+  } else {
+    snprintf(out, PATH_MAX, "%s/%s", current_dir, input);
+  }
+
+  char resolved[PATH_MAX];
+  if (realpath(out, resolved))
+    strcpy(out, resolved);
+
   return true;
 }
 
@@ -145,12 +189,30 @@ static char *next_token(char **cursor) {
   return start;
 }
 
-static void config_parse_line(struct nauka_config *config, char *line) {
+static void config_parse_line(struct nauka_config *config, char *line,
+                              const char *current_dir) {
   line[strcspn(line, "\r\n")] = '\0';
 
   char *trimmed = skip_ws(line);
   if (trimmed[0] == '#' || trimmed[0] == '\0') {
     return; /* whole-line comment or blank */
+  }
+
+  if (strncmp(trimmed, "import", 6) == 0) {
+    char *path = skip_ws(trimmed + 6);
+
+    size_t len = strlen(path);
+    if (len >= 2 && path[0] == '"' && path[len - 1] == '"') {
+      path[len - 1] = '\0';
+      path++;
+    }
+
+    if (*path) {
+      char full[PATH_MAX];
+      if (expand_path(path, current_dir, full))
+        parse_file(config, full);
+    }
+    return;
   }
 
   char *cursor = trimmed;
@@ -326,26 +388,56 @@ static void config_parse_line(struct nauka_config *config, char *line) {
 void config_load(struct nauka_config *config) {
   config_set_defaults(config);
 
-  char path[512];
+  while (imports) {
+    struct imported_file *next = imports->next;
+    free(imports);
+    imports = next;
+  }
+
+  char path[PATH_MAX];
   config_get_path(path, sizeof(path));
-  if (path[0] == '\0') {
+
+  if (path[0] == '\0')
     return;
-  }
 
-  FILE *f = fopen(path, "r");
-  if (f == NULL) {
+  parse_file(config, path);
+}
+
+void parse_file(struct nauka_config *config, const char *path) {
+  char resolved[PATH_MAX];
+
+  if (!realpath(path, resolved))
     return;
+
+  if (already_imported(resolved))
+    return;
+
+  mark_imported(resolved);
+
+  FILE *fp = fopen(resolved, "r");
+  if (!fp)
+    return;
+
+  char dir[PATH_MAX];
+  strcpy(dir, resolved);
+  dirname(dir);
+
+  char line[512];
+  while (fgets(line, sizeof(line), fp)) {
+    config_parse_line(config, line, dir);
   }
 
-  char line[256];
-  while (fgets(line, sizeof(line), f) != NULL) {
-    config_parse_line(config, line);
-  }
-
-  fclose(f);
+  fclose(fp);
 }
 
 void config_reload(struct nauka_config *config) {
+  /* clear import cache */
+  while (imports) {
+    struct imported_file *next = imports->next;
+    free(imports);
+    imports = next;
+  }
+
   struct nauka_config new_config = {0};
 
   config_load(&new_config);

@@ -41,6 +41,7 @@ struct nauka_config {
   float blur_alpha;
 };
 
+void parse_file(struct nauka_config *config, const char *path);
 void config_load(struct nauka_config *config);
 void config_reload(struct nauka_config *config);
 void config_destroy(struct nauka_config *config);
