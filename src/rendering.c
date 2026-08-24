@@ -177,7 +177,8 @@ static void iter_buffer_apply_effects(struct wlr_scene_buffer *buffer, int lx,
   struct nauka_config *config = &toplevel->server->config;
 
   /* opacity applies to every buffer under this toplevel, popups included */
-  wlr_scene_buffer_set_opacity(buffer, toplevel->opacity);
+  wlr_scene_buffer_set_opacity(
+      buffer, toplevel->is_fullscreen ? 1.0f : toplevel->opacity);
 
   struct wlr_scene_surface *scene_surface =
       wlr_scene_surface_try_from_buffer(buffer);
@@ -196,7 +197,7 @@ static void iter_buffer_apply_effects(struct wlr_scene_buffer *buffer, int lx,
 
   struct wlr_scene_blur *blur = buffer_ensure_blur(buffer);
 
-  if (!config->blur) {
+  if (!config->blur || toplevel->is_fullscreen) {
     wlr_scene_node_set_enabled(&blur->node, false);
     return;
   }
