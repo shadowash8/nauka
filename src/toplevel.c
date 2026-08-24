@@ -258,21 +258,7 @@ static void xdg_toplevel_request_maximize(struct wl_listener *listener,
 static void xdg_toplevel_request_fullscreen(struct wl_listener *listener,
                                             void *data) {
   struct nauka_toplevel *t = wl_container_of(listener, t, request_fullscreen);
-
-  t->is_fullscreen = t->xdg_toplevel->requested.fullscreen;
-  wlr_xdg_toplevel_set_fullscreen(t->xdg_toplevel, t->is_fullscreen);
-
-  if (t->is_fullscreen) {
-    wlr_scene_node_reparent(&t->scene_tree->node, t->server->fullscreen_tree);
-  } else {
-    struct wlr_scene_tree *dest =
-        t->floating ? t->server->floating_tree : t->server->toplevel_tree;
-    wlr_scene_node_reparent(&t->scene_tree->node, dest);
-  }
-
-  wlr_scene_node_set_enabled(&t->border_tree->node, !t->is_fullscreen);
-
-  arrange_windows(t->server);
+  toplevel_set_fullscreen(t, t->xdg_toplevel->requested.fullscreen);
 }
 
 void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
@@ -450,25 +436,7 @@ void toplevel_toggle_floating(struct nauka_toplevel *toplevel) {
 void toplevel_toggle_fullscreen(struct nauka_toplevel *toplevel) {
   if (toplevel == NULL)
     return;
-
-  toplevel->is_fullscreen = !toplevel->is_fullscreen;
-  wlr_xdg_toplevel_set_fullscreen(toplevel->xdg_toplevel,
-                                  toplevel->is_fullscreen);
-
-  if (toplevel->is_fullscreen) {
-    wlr_scene_node_reparent(&toplevel->scene_tree->node,
-                            toplevel->server->fullscreen_tree);
-  } else {
-    struct wlr_scene_tree *dest = toplevel->floating
-                                      ? toplevel->server->floating_tree
-                                      : toplevel->server->toplevel_tree;
-    wlr_scene_node_reparent(&toplevel->scene_tree->node, dest);
-  }
-
-  wlr_scene_node_set_enabled(&toplevel->border_tree->node,
-                             !toplevel->is_fullscreen);
-  toplevel_update_blur(toplevel);
-  arrange_windows(toplevel->server);
+  toplevel_set_fullscreen(toplevel, !toplevel->is_fullscreen);
 }
 
 void toplevel_apply_config(struct nauka_server *server) {
@@ -479,4 +447,51 @@ void toplevel_apply_config(struct nauka_server *server) {
     toplevel_update_opacity(toplevel,
                             toplevel == toplevel->server->focused_toplevel);
   }
+}
+
+static void toplevel_save_floating_geometry(struct nauka_toplevel *toplevel) {
+  struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
+  toplevel->floating_geometry = (struct wlr_box){
+      .x = toplevel->scene_tree->node.x,
+      .y = toplevel->scene_tree->node.y,
+      .width = geo.width,
+      .height = geo.height,
+  };
+}
+
+static void
+toplevel_restore_floating_geometry(struct nauka_toplevel *toplevel) {
+  wlr_scene_node_set_position(&toplevel->scene_tree->node,
+                              toplevel->floating_geometry.x,
+                              toplevel->floating_geometry.y);
+  wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel,
+                            toplevel->floating_geometry.width,
+                            toplevel->floating_geometry.height);
+}
+
+void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen) {
+  toplevel->is_fullscreen = fullscreen;
+  wlr_xdg_toplevel_set_fullscreen(toplevel->xdg_toplevel, fullscreen);
+
+  if (fullscreen) {
+    if (toplevel->floating) {
+      toplevel_save_floating_geometry(toplevel);
+    }
+    wlr_scene_node_reparent(&toplevel->scene_tree->node,
+                            toplevel->server->fullscreen_tree);
+  } else {
+    struct wlr_scene_tree *dest = toplevel->floating
+                                      ? toplevel->server->floating_tree
+                                      : toplevel->server->toplevel_tree;
+    wlr_scene_node_reparent(&toplevel->scene_tree->node, dest);
+
+    if (toplevel->floating) {
+      toplevel_restore_floating_geometry(toplevel);
+    }
+  }
+
+  wlr_scene_node_set_enabled(&toplevel->border_tree->node, !fullscreen);
+  toplevel_update_blur(toplevel);
+
+  arrange_windows(toplevel->server);
 }

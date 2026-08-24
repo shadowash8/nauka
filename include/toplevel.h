@@ -54,3 +54,5 @@ void toplevel_toggle_floating(struct nauka_toplevel *toplevel);
 void toplevel_toggle_fullscreen(struct nauka_toplevel *toplevel);
 
 void toplevel_apply_config(struct nauka_server *server);
+
+void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen);

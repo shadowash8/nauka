@@ -54,6 +54,9 @@ struct nauka_server {
   struct wl_listener pointer_focus_change;
   struct wl_listener request_set_selection;
   struct wl_list keyboards;
+  struct wlr_keyboard_shortcuts_inhibit_manager_v1
+      *kb_shortcuts_inhibit_manager;
+  struct wl_listener new_kb_shortcuts_inhibitor;
   enum nauka_cursor_mode cursor_mode;
   struct nauka_toplevel *grabbed_toplevel;
   double grab_x, grab_y;

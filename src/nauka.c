@@ -18,6 +18,7 @@
 #include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
+#include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -228,6 +229,15 @@ int main(int argc, char *argv[]) {
   server.request_set_selection.notify = seat_request_set_selection;
   wl_signal_add(&server.seat->events.request_set_selection,
                 &server.request_set_selection);
+  server.request_set_selection.notify = seat_request_set_selection;
+  wl_signal_add(&server.seat->events.request_set_selection,
+                &server.request_set_selection);
+
+  server.kb_shortcuts_inhibit_manager =
+      wlr_keyboard_shortcuts_inhibit_v1_create(server.wl_display);
+  server.new_kb_shortcuts_inhibitor.notify = server_new_kb_shortcuts_inhibitor;
+  wl_signal_add(&server.kb_shortcuts_inhibit_manager->events.new_inhibitor,
+                &server.new_kb_shortcuts_inhibitor);
 
   /* Add a Unix socket to the Wayland display. */
   const char *socket = wl_display_add_socket_auto(server.wl_display);
@@ -277,6 +287,8 @@ int main(int argc, char *argv[]) {
   wl_list_remove(&server.cursor_button.link);
   wl_list_remove(&server.cursor_axis.link);
   wl_list_remove(&server.cursor_frame.link);
+  wl_list_remove(&server.request_set_selection.link);
+  wl_list_remove(&server.new_kb_shortcuts_inhibitor.link);
 
   wl_list_remove(&server.new_input.link);
   wl_list_remove(&server.request_cursor.link);
