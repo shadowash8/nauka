@@ -1,8 +1,8 @@
 #include "layout.h"
 #include "nauka.h"
 
-#include <wlr/types/wlr_output_layout.h>
 #include <scenefx/types/wlr_scene.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
 void arrange_windows(struct nauka_server *server) {
@@ -24,10 +24,11 @@ void arrange_windows(struct nauka_server *server) {
       continue;
 
     if (t->is_fullscreen) {
-      wlr_scene_node_set_position(&t->scene_tree->node, output->usable_area.x,
-                                  output->usable_area.y);
-      wlr_xdg_toplevel_set_size(t->xdg_toplevel, output->usable_area.width,
-                                output->usable_area.height);
+      struct wlr_box full = {0};
+      wlr_output_layout_get_box(server->output_layout, output->wlr_output,
+                                &full);
+      wlr_scene_node_set_position(&t->scene_tree->node, full.x, full.y);
+      wlr_xdg_toplevel_set_size(t->xdg_toplevel, full.width, full.height);
       return;
     }
   }

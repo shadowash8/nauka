@@ -4,12 +4,12 @@
 #include <wayland-server-protocol.h>
 
 #include <linux/input-event-codes.h>
+#include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_pointer.h>
-#include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/edges.h>
@@ -289,7 +289,8 @@ void server_cursor_button(struct wl_listener *listener, void *data) {
   struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(server->seat);
   uint32_t modifiers = keyboard ? wlr_keyboard_get_modifiers(keyboard) : 0;
 
-  if (toplevel && (modifiers & server->config.mod) == server->config.mod) {
+  if (toplevel && !toplevel->is_fullscreen &&
+      (modifiers & server->config.mod) == server->config.mod) {
 
     if (event->button == server->config.move_button) {
       focus_toplevel(toplevel);

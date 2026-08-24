@@ -10,6 +10,7 @@ enum nauka_keybind_action {
   NAUKA_ACTION_VIEW_TAG,
   NAUKA_ACTION_MOVE_FOCUSED_TO_TAG,
   NAUKA_ACTION_TOGGLE_FLOATING,
+  NAUKA_ACTION_TOGGLE_FULLSCREEN,
 };
 
 struct nauka_keybind {

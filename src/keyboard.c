@@ -201,6 +201,12 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         }
         break;
       }
+      case NAUKA_ACTION_TOGGLE_FULLSCREEN: {
+        if (server->focused_toplevel != NULL) {
+          toplevel_toggle_fullscreen(server->focused_toplevel);
+        }
+        break;
+      }
       }
 
       handled = true;

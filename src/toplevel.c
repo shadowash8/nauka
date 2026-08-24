@@ -214,6 +214,9 @@ static void xdg_toplevel_request_move(struct wl_listener *listener,
   struct nauka_toplevel *toplevel =
       wl_container_of(listener, toplevel, request_move);
 
+  if (toplevel->is_fullscreen)
+    return;
+
   if (!toplevel->floating) {
     toplevel->floating = true;
     wlr_scene_node_reparent(&toplevel->scene_tree->node,
@@ -230,7 +233,7 @@ static void xdg_toplevel_request_resize(struct wl_listener *listener,
   struct nauka_toplevel *toplevel =
       wl_container_of(listener, toplevel, request_resize);
 
-  if (!toplevel->floating)
+  if (!toplevel->floating || toplevel->is_fullscreen)
     return; /* tiled windows resize via arrange_windows, not drag */
 
   begin_interactive(toplevel, NAUKA_CURSOR_RESIZE, event->edges);
@@ -258,6 +261,17 @@ static void xdg_toplevel_request_fullscreen(struct wl_listener *listener,
 
   t->is_fullscreen = t->xdg_toplevel->requested.fullscreen;
   wlr_xdg_toplevel_set_fullscreen(t->xdg_toplevel, t->is_fullscreen);
+
+  if (t->is_fullscreen) {
+    wlr_scene_node_reparent(&t->scene_tree->node, t->server->fullscreen_tree);
+  } else {
+    struct wlr_scene_tree *dest =
+        t->floating ? t->server->floating_tree : t->server->toplevel_tree;
+    wlr_scene_node_reparent(&t->scene_tree->node, dest);
+  }
+
+  wlr_scene_node_set_enabled(&t->border_tree->node, !t->is_fullscreen);
+
   arrange_windows(t->server);
 }
 
@@ -431,6 +445,30 @@ void toplevel_toggle_floating(struct nauka_toplevel *toplevel) {
   }
 
   arrange_windows(server);
+}
+
+void toplevel_toggle_fullscreen(struct nauka_toplevel *toplevel) {
+  if (toplevel == NULL)
+    return;
+
+  toplevel->is_fullscreen = !toplevel->is_fullscreen;
+  wlr_xdg_toplevel_set_fullscreen(toplevel->xdg_toplevel,
+                                  toplevel->is_fullscreen);
+
+  if (toplevel->is_fullscreen) {
+    wlr_scene_node_reparent(&toplevel->scene_tree->node,
+                            toplevel->server->fullscreen_tree);
+  } else {
+    struct wlr_scene_tree *dest = toplevel->floating
+                                      ? toplevel->server->floating_tree
+                                      : toplevel->server->toplevel_tree;
+    wlr_scene_node_reparent(&toplevel->scene_tree->node, dest);
+  }
+
+  wlr_scene_node_set_enabled(&toplevel->border_tree->node,
+                             !toplevel->is_fullscreen);
+
+  arrange_windows(toplevel->server);
 }
 
 void toplevel_apply_config(struct nauka_server *server) {

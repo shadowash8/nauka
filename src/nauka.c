@@ -139,6 +139,7 @@ int main(int argc, char *argv[]) {
       wlr_scene_optimized_blur_create(&server.scene->tree, 0, 0);
   server.top_tree = wlr_scene_tree_create(&server.scene->tree);
   server.overlay_tree = wlr_scene_tree_create(&server.scene->tree);
+  server.fullscreen_tree = wlr_scene_tree_create(&server.scene->tree);
 
   /* Set up xdg-shell version 3. The xdg-shell is a Wayland protocol which is
    * used for application windows. For more detail on shells, refer to

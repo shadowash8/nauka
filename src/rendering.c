@@ -78,6 +78,12 @@ void toplevel_update_borders(struct nauka_toplevel *toplevel) {
   int bw = config->border_width;
   int r = toplevel->corner_radius;
 
+  if (toplevel->is_fullscreen) {
+    wlr_scene_node_set_enabled(&toplevel->border_tree->node, false);
+    toplevel_apply_content_radii(toplevel, w, h, 0);
+    return;
+  }
+
   if (toplevel->border == NULL) {
     toplevel->border = wlr_scene_rect_create(toplevel->border_tree, 0, 0,
                                              config->border_color_inactive);
@@ -204,7 +210,7 @@ static void iter_buffer_apply_effects(struct wlr_scene_buffer *buffer, int lx,
   /* clip the blur to match the windows's rounded corners */
   struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
   int bw = config->border_width;
-  int inner_r = toplevel->corner_radius - bw;
+  int inner_r = toplevel->is_fullscreen ? 0 : toplevel->corner_radius - bw;
   if (inner_r < 0)
     inner_r = 0;
   struct fx_corner_radii corners = compute_edge_radii(

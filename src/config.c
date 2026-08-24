@@ -399,6 +399,8 @@ static void config_parse_line(struct nauka_config *config, char *line,
     kb->tag = keysym - XKB_KEY_1;
   } else if (strcasecmp(action_str, "toggle_floating") == 0) {
     kb->action = NAUKA_ACTION_TOGGLE_FLOATING;
+  } else if (strcasecmp(action_str, "toggle_fullscreen") == 0) {
+    kb->action = NAUKA_ACTION_TOGGLE_FULLSCREEN;
   } else {
     free(kb);
     return;

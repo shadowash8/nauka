@@ -35,6 +35,7 @@ struct nauka_server {
   struct wlr_scene_optimized_blur *blur_layer;
   struct wlr_scene_tree *top_tree;
   struct wlr_scene_tree *overlay_tree;
+  struct wlr_scene_tree *fullscreen_tree;
 
   struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager;
   struct wl_listener new_toplevel_decoration;
