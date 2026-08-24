@@ -57,15 +57,6 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
     return;
   }
 
-  /* Center the new toplevel on the output it'll first appear on. */
-  struct wlr_box geo = toplevel->xdg_toplevel->base->geometry;
-  int width = geo.width > 0 ? geo.width : box.width;
-  int height = geo.height > 0 ? geo.height : box.height;
-
-  wlr_scene_node_set_position(&toplevel->scene_tree->node,
-                              box.x + (box.width - width) / 2,
-                              box.y + (box.height - height) / 2);
-
   wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
   toplevel_update_borders(toplevel);
   toplevel_update_blur(toplevel);
