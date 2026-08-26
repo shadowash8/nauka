@@ -28,6 +28,7 @@
           ninja
           pkg-config
           wayland-scanner
+          makeBinaryWrapper
         ];
 
         buildInputs = with pkgs; [
@@ -41,17 +42,12 @@
           libxkbcommon
           seatd
           scenefx
-          xwayland-satellite
-          xwayland
         ];
-      };
-    });
-
-    devShells = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-    in {
-      default = pkgs.mkShell {
-        inputsFrom = [ self.packages.${system}.default ];
+    
+        postInstall = ''
+          wrapProgram $out/bin/nauka \
+            --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.xwayland pkgs.xwayland-satellite ]}
+        '';
       };
     });
   };
