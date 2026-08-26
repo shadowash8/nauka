@@ -15,6 +15,7 @@ wlroots = dependency('wlroots-0.20')
 xkbcommon = dependency('xkbcommon')
 wayland_scanner = find_program('wayland-scanner')
 wayland_protocols = dependency('wayland-protocols')
+pixman = dependency('pixman-1')
 protocol_dir = wayland_protocols.get_variable('pkgdatadir')
 inc = include_directories('include')
 
@@ -69,6 +70,7 @@ executable(
         scenefx,
         wlroots,
         xkbcommon,
+        pixman,
     ],
     install: true,
 )

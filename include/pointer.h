@@ -6,6 +6,10 @@ enum nauka_cursor_mode {
   NAUKA_CURSOR_RESIZE,
 };
 
+struct nauka_server;
+
+void server_new_pointer_constraint(struct wl_listener *listener, void *data);
+
 void seat_pointer_focus_change(struct wl_listener *listener, void *data);
 void server_cursor_motion(struct wl_listener *listener, void *data);
 void server_cursor_motion_absolute(struct wl_listener *listener, void *data);

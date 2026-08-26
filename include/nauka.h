@@ -54,6 +54,10 @@ struct nauka_server {
   struct wl_listener request_cursor;
   struct wl_listener pointer_focus_change;
   struct wl_listener request_set_selection;
+  struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
+  struct wlr_pointer_constraints_v1 *pointer_constraints;
+  struct wlr_pointer_constraint_v1 *active_constraint;
+  struct wl_listener new_pointer_constraint;
   struct wl_list keyboards;
   struct wlr_keyboard_shortcuts_inhibit_manager_v1
       *kb_shortcuts_inhibit_manager;

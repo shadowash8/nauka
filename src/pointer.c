@@ -1,4 +1,5 @@
 #include "nauka.h"
+#include <pixman.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
@@ -10,9 +11,82 @@
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_pointer.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/edges.h>
+
+static void constrain_pointer(struct nauka_server *server,
+                              struct wlr_pointer_constraint_v1 *constraint) {
+  if (server->active_constraint == constraint) {
+    return;
+  }
+  if (server->active_constraint) {
+    wlr_pointer_constraint_v1_send_deactivated(server->active_constraint);
+  }
+  server->active_constraint = constraint;
+  if (constraint != NULL) {
+    wlr_pointer_constraint_v1_send_activated(constraint);
+  }
+}
+
+struct nauka_pointer_constraint {
+  struct nauka_server *server;
+  struct wlr_pointer_constraint_v1 *constraint;
+  struct wl_listener destroy;
+};
+
+static void handle_constraint_destroy(struct wl_listener *listener,
+                                      void *data) {
+  struct nauka_pointer_constraint *nc = wl_container_of(listener, nc, destroy);
+  struct nauka_server *server = nc->server;
+
+  wl_list_remove(&nc->destroy.link);
+  if (server->active_constraint == nc->constraint) {
+    server->active_constraint = NULL;
+  }
+  free(nc);
+}
+
+void server_new_pointer_constraint(struct wl_listener *listener, void *data) {
+  struct nauka_server *server =
+      wl_container_of(listener, server, new_pointer_constraint);
+  struct wlr_pointer_constraint_v1 *wlr_constraint = data;
+
+  struct nauka_pointer_constraint *nc = calloc(1, sizeof(*nc));
+  nc->server = server;
+  nc->constraint = wlr_constraint;
+  nc->destroy.notify = handle_constraint_destroy;
+  wl_signal_add(&wlr_constraint->events.destroy, &nc->destroy);
+
+  /* If the surface asking for a constraint already has pointer focus,
+   * activate immediately instead of waiting for the next focus change. */
+  if (server->seat->pointer_state.focused_surface == wlr_constraint->surface) {
+    constrain_pointer(server, wlr_constraint);
+  }
+}
+
+/* Clamp the cursor to stay within the confinement region a client set,
+ * e.g. a game menu that still shows the cursor but keeps it in-window. */
+static void
+confine_pointer_to_region(struct nauka_server *server,
+                          struct wlr_pointer_constraint_v1 *constraint) {
+  if (!pixman_region32_not_empty(&constraint->region)) {
+    return;
+  }
+
+  double sx = server->seat->pointer_state.sx;
+  double sy = server->seat->pointer_state.sy;
+
+  if (!pixman_region32_contains_point(&constraint->region, (int)sx, (int)sy,
+                                      NULL)) {
+    pixman_box32_t *box = pixman_region32_extents(&constraint->region);
+    double clamped_sx = sx < box->x1 ? box->x1 : (sx > box->x2 ? box->x2 : sx);
+    double clamped_sy = sy < box->y1 ? box->y1 : (sy > box->y2 ? box->y2 : sy);
+    wlr_cursor_move(server->cursor, NULL, clamped_sx - sx, clamped_sy - sy);
+  }
+}
 
 static void server_new_pointer(struct nauka_server *server,
                                struct wlr_input_device *device) {
@@ -70,13 +144,17 @@ void seat_request_cursor(struct wl_listener *listener, void *data) {
 void seat_pointer_focus_change(struct wl_listener *listener, void *data) {
   struct nauka_server *server =
       wl_container_of(listener, server, pointer_focus_change);
-  /* This event is raised when the pointer focus is changed, including when the
-   * client is closed. We set the cursor image to its default if target surface
-   * is NULL */
   struct wlr_seat_pointer_focus_change_event *event = data;
   if (event->new_surface == NULL) {
     wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "default");
   }
+
+  struct wlr_pointer_constraint_v1 *constraint = NULL;
+  if (event->new_surface) {
+    constraint = wlr_pointer_constraints_v1_constraint_for_surface(
+        server->pointer_constraints, event->new_surface, server->seat);
+  }
+  constrain_pointer(server, constraint);
 }
 
 void seat_request_set_selection(struct wl_listener *listener, void *data) {
@@ -231,18 +309,32 @@ static void process_cursor_motion(struct nauka_server *server, uint32_t time) {
 }
 
 void server_cursor_motion(struct wl_listener *listener, void *data) {
-  /* This event is forwarded by the cursor when a pointer emits a _relative_
-   * pointer motion event (i.e. a delta) */
   struct nauka_server *server =
       wl_container_of(listener, server, cursor_motion);
   struct wlr_pointer_motion_event *event = data;
-  /* The cursor doesn't move unless we tell it to. The cursor automatically
-   * handles constraining the motion to the output layout, as well as any
-   * special configuration applied for the specific input device which
-   * generated the event. You can pass NULL for the device if you want to move
-   * the cursor around without any input. */
+
+  /* Always deliver raw relative deltas to clients using the relative
+   * pointer protocol — this is what gives Minecraft/GLFW smooth mouse-look
+   * instead of accel-based fallback motion. */
+  wlr_relative_pointer_manager_v1_send_relative_motion(
+      server->relative_pointer_manager, server->seat,
+      (uint64_t)event->time_msec * 1000, event->delta_x, event->delta_y,
+      event->unaccel_dx, event->unaccel_dy);
+
+  struct wlr_pointer_constraint_v1 *constraint = server->active_constraint;
+  if (constraint && constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED) {
+    /* Locked: cursor position stays frozen, client only sees relative
+     * deltas above. This is the mode Minecraft's mouse-look actually uses. */
+    return;
+  }
+
   wlr_cursor_move(server->cursor, &event->pointer->base, event->delta_x,
                   event->delta_y);
+
+  if (constraint && constraint->type == WLR_POINTER_CONSTRAINT_V1_CONFINED) {
+    confine_pointer_to_region(server, constraint);
+  }
+
   process_cursor_motion(server, event->time_msec);
 }
 
