@@ -14,15 +14,20 @@
     in {
       default = pkgs.stdenv.mkDerivation {
         pname = "nauka";
-        version = "0.1.0";
-        src = ./.;
+        version = "main";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "shadowash8";
+          repo = "nauka";
+          rev = "main";
+          hash = "sha256-pD439Emit1XgluVvWgZJh/vkckUk5JStf+sTALRHXBM=";
+        };
 
         nativeBuildInputs = with pkgs; [
           meson
           ninja
           pkg-config
           wayland-scanner
-          makeWrapper
         ];
 
         buildInputs = with pkgs; [
@@ -36,12 +41,9 @@
           libxkbcommon
           seatd
           scenefx
+          xwayland-satellite
+          xwayland
         ];
-
-        postFixup = ''
-          wrapProgram $out/bin/nauka \
-            --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.xwayland-satellite ]}
-        '';
       };
     });
 
@@ -50,7 +52,6 @@
     in {
       default = pkgs.mkShell {
         inputsFrom = [ self.packages.${system}.default ];
-        packages = with pkgs; [ xwayland-satellite ];
       };
     });
   };
