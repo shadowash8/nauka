@@ -19,6 +19,7 @@ struct nauka_server {
   struct wlr_allocator *allocator;
   struct wlr_scene *scene;
   struct wlr_scene_output_layout *scene_layout;
+  pid_t xwayland_satellite_pid;
 
   struct wlr_xdg_shell *xdg_shell;
   struct wl_listener new_xdg_toplevel;

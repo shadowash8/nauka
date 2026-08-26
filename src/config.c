@@ -37,6 +37,8 @@ static void config_set_defaults(struct nauka_config *config) {
   config->blur = false;
   config->blur_strength = 3.0f;
   config->blur_alpha = 1.0f;
+
+  config->xwayland = false;
 }
 
 /* Parses "#rrggbb" or "#rrggbbaa" into a float[4] rgba. Returns false on
@@ -327,6 +329,16 @@ static void config_parse_line(struct nauka_config *config, char *line,
     char *value = next_token(&cursor);
     if (value != NULL)
       config->blur_alpha = atof(value);
+    return;
+  }
+
+  if (strcmp(directive, "xwayland") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      config->xwayland = strcasecmp(value, "true") == 0 ||
+                         strcasecmp(value, "1") == 0 ||
+                         strcasecmp(value, "yes") == 0;
+    }
     return;
   }
 

@@ -47,6 +47,7 @@ struct nauka_config {
   float blur_alpha;
 
   struct nauka_autostart *autostart;
+  bool xwayland;
 };
 
 void parse_file(struct nauka_config *config, const char *path);

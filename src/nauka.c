@@ -3,9 +3,11 @@
 #include <getopt.h>
 #include <scenefx/render/fx_renderer/fx_renderer.h>
 #include <scenefx/types/wlr_scene.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
@@ -27,6 +29,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_subcompositor.h>
+#include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
@@ -104,6 +107,7 @@ int main(int argc, char *argv[]) {
   wlr_data_device_manager_create(server.wl_display);
   wlr_data_control_manager_v1_create(server.wl_display);
   wlr_screencopy_manager_v1_create(server.wl_display);
+  wlr_viewporter_create(server.wl_display);
 
   /* Creates an output layout, which a wlroots utility for working with an
    * arrangement of screens in a physical layout. */
@@ -257,6 +261,24 @@ int main(int argc, char *argv[]) {
   /* Set the WAYLAND_DISPLAY environment variable to our socket and run the
    * startup command if requested. */
   setenv("WAYLAND_DISPLAY", socket, true);
+
+  /* Launch xwayland-satellite for rootless X11 support, if enabled. */
+  if (server.config.xwayland) {
+    const char *x11_display = ":1";
+    server.xwayland_satellite_pid = fork();
+    if (server.xwayland_satellite_pid == 0) {
+      execlp("xwayland-satellite", "xwayland-satellite", x11_display,
+             (void *)NULL);
+      _exit(1);
+    } else if (server.xwayland_satellite_pid > 0) {
+      setenv("DISPLAY", x11_display, true);
+      wlr_log(WLR_INFO, "started xwayland-satellite on DISPLAY=%s (pid %d)",
+              x11_display, server.xwayland_satellite_pid);
+    } else {
+      wlr_log(WLR_ERROR, "failed to fork for xwayland-satellite");
+    }
+  }
+
   if (startup_cmd) {
     if (fork() == 0) {
       execl("/bin/sh", "/bin/sh", "-c", startup_cmd, (void *)NULL);
@@ -275,6 +297,11 @@ int main(int argc, char *argv[]) {
   /* Once wl_display_run returns, we destroy all clients then shut down the
    * server. */
   wl_display_destroy_clients(server.wl_display);
+
+  if (server.config.xwayland && server.xwayland_satellite_pid > 0) {
+    kill(server.xwayland_satellite_pid, SIGTERM);
+    waitpid(server.xwayland_satellite_pid, NULL, 0);
+  }
 
   wl_list_remove(&server.new_xdg_toplevel.link);
   wl_list_remove(&server.new_xdg_popup.link);

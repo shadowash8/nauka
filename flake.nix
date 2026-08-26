@@ -15,28 +15,33 @@
       default = pkgs.stdenv.mkDerivation {
         pname = "nauka";
         version = "0.1.0";
-
         src = ./.;
 
         nativeBuildInputs = with pkgs; [
           meson
           ninja
           pkg-config
-	  wayland-scanner
+          wayland-scanner
+          makeWrapper
         ];
 
         buildInputs = with pkgs; [
           wayland
           wayland-protocols
-	  wlroots_0_20
+          wlroots_0_20
           libinput
           libdrm
           pixman
-	  libGL
+          libGL
           libxkbcommon
           seatd
-	  scenefx
+          scenefx
         ];
+
+        postFixup = ''
+          wrapProgram $out/bin/nauka \
+            --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.xwayland-satellite ]}
+        '';
       };
     });
 
@@ -45,6 +50,7 @@
     in {
       default = pkgs.mkShell {
         inputsFrom = [ self.packages.${system}.default ];
+        packages = with pkgs; [ xwayland-satellite ];
       };
     });
   };
