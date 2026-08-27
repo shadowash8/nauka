@@ -9,6 +9,8 @@ enum nauka_cursor_mode {
 struct nauka_server;
 
 void server_new_pointer_constraint(struct wl_listener *listener, void *data);
+void seat_request_start_drag(struct wl_listener *listener, void *data);
+void seat_start_drag(struct wl_listener *listener, void *data);
 
 void seat_pointer_focus_change(struct wl_listener *listener, void *data);
 void server_cursor_motion(struct wl_listener *listener, void *data);

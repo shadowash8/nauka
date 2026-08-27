@@ -265,6 +265,47 @@ static void process_cursor_resize(struct nauka_server *server) {
   wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, new_width, new_height);
 }
 
+static void handle_drag_icon_destroy(struct wl_listener *listener, void *data) {
+  struct nauka_server *server =
+      wl_container_of(listener, server, drag_icon_destroy);
+  wl_list_remove(&server->drag_icon_destroy.link);
+  server->drag_icon = NULL;
+}
+
+void seat_request_start_drag(struct wl_listener *listener, void *data) {
+  struct nauka_server *server =
+      wl_container_of(listener, server, request_start_drag);
+  struct wlr_seat_request_start_drag_event *event = data;
+
+  if (wlr_seat_validate_pointer_grab_serial(server->seat, event->origin,
+                                            event->serial)) {
+    wlr_seat_start_pointer_drag(server->seat, event->drag, event->serial);
+    return;
+  }
+
+  /* Reject drags with a stale/invalid serial, per wlroots' recommendation,
+   * so the client doesn't hang waiting for a drag that'll never start. */
+  if (event->drag->source != NULL) {
+    wlr_data_source_destroy(event->drag->source);
+  }
+}
+
+void seat_start_drag(struct wl_listener *listener, void *data) {
+  struct nauka_server *server = wl_container_of(listener, server, start_drag);
+  struct wlr_drag *drag = data;
+  if (!drag->icon) {
+    return; /* some drags have no visual icon, that's valid */
+  }
+
+  server->drag_icon =
+      wlr_scene_drag_icon_create(&server->scene->tree, drag->icon);
+  wlr_scene_node_set_position(&server->drag_icon->node, server->cursor->x,
+                              server->cursor->y);
+
+  server->drag_icon_destroy.notify = handle_drag_icon_destroy;
+  wl_signal_add(&drag->icon->events.destroy, &server->drag_icon_destroy);
+}
+
 static void process_cursor_motion(struct nauka_server *server, uint32_t time) {
   /* If the mode is non-passthrough, delegate to those functions. */
   if (server->cursor_mode == NAUKA_CURSOR_MOVE) {
@@ -273,6 +314,10 @@ static void process_cursor_motion(struct nauka_server *server, uint32_t time) {
   } else if (server->cursor_mode == NAUKA_CURSOR_RESIZE) {
     process_cursor_resize(server);
     return;
+  }
+  if (server->drag_icon != NULL) {
+    wlr_scene_node_set_position(&server->drag_icon->node, server->cursor->x,
+                                server->cursor->y);
   }
 
   /* Otherwise, find the toplevel under the pointer and send the event along. */

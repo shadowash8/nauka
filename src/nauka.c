@@ -245,6 +245,11 @@ int main(int argc, char *argv[]) {
   server.request_set_selection.notify = seat_request_set_selection;
   wl_signal_add(&server.seat->events.request_set_selection,
                 &server.request_set_selection);
+  server.request_start_drag.notify = seat_request_start_drag;
+  wl_signal_add(&server.seat->events.request_start_drag,
+                &server.request_start_drag);
+  server.start_drag.notify = seat_start_drag;
+  wl_signal_add(&server.seat->events.start_drag, &server.start_drag);
 
   server.kb_shortcuts_inhibit_manager =
       wlr_keyboard_shortcuts_inhibit_v1_create(server.wl_display);
@@ -331,6 +336,8 @@ int main(int argc, char *argv[]) {
   wl_list_remove(&server.new_pointer_constraint.link);
   wl_list_remove(&server.pointer_focus_change.link);
   wl_list_remove(&server.request_set_selection.link);
+  wl_list_remove(&server.request_start_drag.link);
+  wl_list_remove(&server.start_drag.link);
 
   wl_list_remove(&server.new_output.link);
 

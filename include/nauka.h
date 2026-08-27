@@ -67,6 +67,11 @@ struct nauka_server {
   double grab_x, grab_y;
   struct wlr_box grab_geobox;
   uint32_t resize_edges;
+  struct wlr_scene_tree *drag_icon;
+  struct wl_listener request_start_drag;
+  struct wl_listener start_drag;
+  struct wl_listener drag_icon_destroy;
+
   struct nauka_toplevel *focused_toplevel;
   struct nauka_toplevel *prev_focused;
 
