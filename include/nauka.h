@@ -78,6 +78,9 @@ struct nauka_server {
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
   struct wl_listener new_output;
+  struct wlr_output_manager_v1 *output_manager;
+  struct wl_listener output_manager_apply;
+  struct wl_listener output_manager_test;
 
   struct nauka_config config;
   int current_tag;

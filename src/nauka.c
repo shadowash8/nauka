@@ -24,6 +24,7 @@
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
@@ -115,6 +116,13 @@ int main(int argc, char *argv[]) {
    * arrangement of screens in a physical layout. */
   server.output_layout = wlr_output_layout_create(server.wl_display);
   wlr_xdg_output_manager_v1_create(server.wl_display, server.output_layout);
+  server.output_manager = wlr_output_manager_v1_create(server.wl_display);
+  server.output_manager_apply.notify = output_manager_apply;
+  wl_signal_add(&server.output_manager->events.apply,
+                &server.output_manager_apply);
+  server.output_manager_test.notify = output_manager_test;
+  wl_signal_add(&server.output_manager->events.test,
+                &server.output_manager_test);
 
   /* Configure a listener to be notified when new outputs are available on the
    * backend. */
@@ -340,6 +348,8 @@ int main(int argc, char *argv[]) {
   wl_list_remove(&server.start_drag.link);
 
   wl_list_remove(&server.new_output.link);
+  wl_list_remove(&server.output_manager_apply.link);
+  wl_list_remove(&server.output_manager_test.link);
 
   wlr_scene_node_destroy(&server.scene->tree.node);
   wlr_xcursor_manager_destroy(server.cursor_mgr);

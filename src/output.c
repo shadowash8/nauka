@@ -6,6 +6,8 @@
 #include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_output_management_v1.h>
+#include <wlr/types/wlr_xcursor_manager.h>
 
 void output_frame(struct wl_listener *listener, void *data) {
   (void)data;
@@ -40,8 +42,8 @@ static void output_request_state(struct wl_listener *listener, void *data) {
 
 static void output_destroy(struct wl_listener *listener, void *data) {
   (void)data;
-
   struct nauka_output *output = wl_container_of(listener, output, destroy);
+  struct nauka_server *server = output->server;
 
   wlr_ext_workspace_group_handle_v1_output_leave(
       output->server->workspace_group, output->wlr_output);
@@ -53,6 +55,124 @@ static void output_destroy(struct wl_listener *listener, void *data) {
   wl_list_remove(&output->destroy.link);
   wl_list_remove(&output->link);
   free(output);
+
+  update_output_manager_config(server);
+}
+
+void update_output_manager_config(struct nauka_server *server) {
+  struct wlr_output_configuration_v1 *config =
+      wlr_output_configuration_v1_create();
+
+  struct nauka_output *output;
+  wl_list_for_each(output, &server->outputs, link) {
+    struct wlr_output_configuration_head_v1 *head =
+        wlr_output_configuration_head_v1_create(config, output->wlr_output);
+
+    struct wlr_box output_box;
+    wlr_output_layout_get_box(server->output_layout, output->wlr_output,
+                              &output_box);
+
+    head->state.enabled = output->wlr_output->enabled;
+    head->state.x = output_box.x;
+    head->state.y = output_box.y;
+  }
+
+  wlr_output_manager_v1_set_configuration(server->output_manager, config);
+}
+
+static bool apply_output_config(struct wlr_output_configuration_v1 *config,
+                                struct nauka_server *server, bool test_only) {
+  bool ok = true;
+
+  struct wlr_output_configuration_head_v1 *head;
+  wl_list_for_each(head, &config->heads, link) {
+    struct wlr_output *wlr_output = head->state.output;
+    struct nauka_output *output = wlr_output->data;
+
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+    wlr_output_state_set_enabled(&state, head->state.enabled);
+
+    if (head->state.enabled) {
+      if (head->state.mode != NULL) {
+        wlr_output_state_set_mode(&state, head->state.mode);
+      } else {
+        wlr_output_state_set_custom_mode(&state, head->state.custom_mode.width,
+                                         head->state.custom_mode.height,
+                                         head->state.custom_mode.refresh);
+      }
+      wlr_output_state_set_transform(&state, head->state.transform);
+      wlr_output_state_set_scale(&state, head->state.scale);
+      wlr_output_state_set_adaptive_sync_enabled(
+          &state, head->state.adaptive_sync_enabled);
+    }
+
+    if (test_only) {
+      ok &= wlr_output_test_state(wlr_output, &state);
+      wlr_output_state_finish(&state);
+      continue;
+    }
+
+    ok &= wlr_output_commit_state(wlr_output, &state);
+    wlr_output_state_finish(&state);
+
+    if (!ok) {
+      continue;
+    }
+
+    if (head->state.enabled) {
+      wlr_output_layout_add(server->output_layout, wlr_output, head->state.x,
+                            head->state.y);
+    } else {
+      wlr_output_layout_remove(server->output_layout, wlr_output);
+    }
+
+    /* Mode/scale/transform/position all just changed. None of this
+     * propagates on its own -- usable_area, layer-shell positions, the
+     * blur backdrop size, and the tiling grid all need to be recomputed. */
+    if (output != NULL && head->state.enabled) {
+      arrange_layers(output);
+      wlr_scene_optimized_blur_set_size(server->blur_layer, wlr_output->width,
+                                        wlr_output->height);
+    }
+  }
+
+  if (!test_only) {
+    /* Reload cursor theme at every scale currently in use so HiDPI
+     * outputs get correctly rasterized cursors after a scale change. */
+    struct nauka_output *o;
+    wl_list_for_each(o, &server->outputs, link) {
+      wlr_xcursor_manager_load(server->cursor_mgr, o->wlr_output->scale);
+    }
+
+    arrange_windows(server);
+  }
+
+  if (ok) {
+    wlr_output_configuration_v1_send_succeeded(config);
+  } else {
+    wlr_output_configuration_v1_send_failed(config);
+  }
+  wlr_output_configuration_v1_destroy(config);
+
+  return ok;
+}
+
+void output_manager_apply(struct wl_listener *listener, void *data) {
+  struct nauka_server *server =
+      wl_container_of(listener, server, output_manager_apply);
+  struct wlr_output_configuration_v1 *config = data;
+
+  apply_output_config(config, server, false);
+  update_output_manager_config(server);
+}
+
+void output_manager_test(struct wl_listener *listener, void *data) {
+  struct nauka_server *server =
+      wl_container_of(listener, server, output_manager_test);
+  struct wlr_output_configuration_v1 *config = data;
+
+  apply_output_config(config, server, true);
 }
 
 void server_new_output(struct wl_listener *listener, void *data) {
@@ -127,4 +247,6 @@ void server_new_output(struct wl_listener *listener, void *data) {
   wlr_ext_workspace_group_handle_v1_output_enter(server->workspace_group,
                                                  wlr_output);
   arrange_layers(output);
+  update_output_manager_config(server);
+  arrange_windows(server);
 }
