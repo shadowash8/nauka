@@ -31,6 +31,7 @@
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_server_decoration.h>
+#include <wlr/types/wlr_session_lock_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -188,6 +189,15 @@ int main(int argc, char *argv[]) {
   wlr_server_decoration_manager_set_default_mode(
       server_decoration_manager, WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 
+  /* Setup lock screen */
+  server.lock_tree = wlr_scene_tree_create(&server.scene->tree);
+  wlr_scene_node_set_enabled(&server.lock_tree->node, false);
+  server.session_lock_manager =
+      wlr_session_lock_manager_v1_create(server.wl_display);
+  server.new_session_lock.notify = server_new_session_lock;
+  wl_signal_add(&server.session_lock_manager->events.new_lock,
+                &server.new_session_lock);
+
   /*
    * Creates a cursor, which is a wlroots utility for tracking the cursor
    * image shown on screen.
@@ -330,6 +340,7 @@ int main(int argc, char *argv[]) {
 
   wl_list_remove(&server.new_layer_surface.link);
   wl_list_remove(&server.new_toplevel_decoration.link);
+  wl_list_remove(&server.new_session_lock.link);
 
   wl_list_remove(&server.cursor_motion.link);
   wl_list_remove(&server.cursor_motion_absolute.link);

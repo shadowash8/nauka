@@ -10,6 +10,9 @@ struct nauka_output {
 
   struct wlr_box usable_area;
   struct wl_list layers;
+
+  struct wlr_scene_rect *lock_background;
+  struct nauka_session_lock_surface *lock_surface;
 };
 
 void output_frame(struct wl_listener *listener, void *data);

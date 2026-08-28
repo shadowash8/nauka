@@ -6,6 +6,7 @@
 #include "output.h"
 #include "pointer.h"
 #include "rendering.h"
+#include "session_lock.h"
 #include "tags.h"
 #include "toplevel.h"
 #include <wlr/backend.h>
@@ -37,6 +38,12 @@ struct nauka_server {
   struct wlr_scene_tree *top_tree;
   struct wlr_scene_tree *overlay_tree;
   struct wlr_scene_tree *fullscreen_tree;
+  struct wlr_scene_tree *lock_tree;
+
+  struct wlr_session_lock_manager_v1 *session_lock_manager;
+  struct wl_listener new_session_lock;
+  struct nauka_session_lock *session_lock;
+  bool locked;
 
   struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager;
   struct wl_listener new_toplevel_decoration;

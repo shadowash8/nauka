@@ -440,18 +440,29 @@ void toplevel_toggle_sticky(struct nauka_toplevel *toplevel) {
   if (toplevel == NULL || toplevel->is_fullscreen)
     return;
 
+  struct nauka_server *server = toplevel->server;
+
   toplevel->sticky = !toplevel->sticky;
 
-  if (toplevel->sticky && !toplevel->floating) {
-    /* sticky implies floating -- keeps it out of arrange_windows()
-     * entirely, so layout.c needs no awareness of stickiness */
-    toplevel->floating = true;
-    wlr_scene_node_reparent(&toplevel->scene_tree->node,
-                            toplevel->server->floating_tree);
+  if (toplevel->sticky) {
+    /* becoming sticky: keep floating as before */
+    if (!toplevel->floating) {
+      toplevel->floating = true;
+      wlr_scene_node_reparent(&toplevel->scene_tree->node,
+                              server->floating_tree);
+    }
+  } else {
+    int old_tag = toplevel->tag;
+    toplevel->tag = server->current_tag;
+
+    if (old_tag != toplevel->tag) {
+      workspace_update_hidden(server, old_tag);
+      workspace_update_hidden(server, toplevel->tag);
+    }
   }
 
-  update_toplevel_visibility(toplevel->server);
-  arrange_windows(toplevel->server); /* re-flow tiled siblings */
+  update_toplevel_visibility(server);
+  arrange_windows(server);
 }
 
 void toplevel_toggle_fullscreen(struct nauka_toplevel *toplevel) {

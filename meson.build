@@ -61,6 +61,7 @@ executable(
         'src/output.c',
         'src/pointer.c',
         'src/rendering.c',
+        'src/session_lock.c',
         'src/tags.c',
         'src/toplevel.c',
     ],

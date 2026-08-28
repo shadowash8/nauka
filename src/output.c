@@ -54,6 +54,9 @@ static void output_destroy(struct wl_listener *listener, void *data) {
   wl_list_remove(&output->request_state.link);
   wl_list_remove(&output->destroy.link);
   wl_list_remove(&output->link);
+
+  session_lock_output_destroy(output);
+
   free(output);
 
   update_output_manager_config(server);
@@ -134,6 +137,7 @@ static bool apply_output_config(struct wlr_output_configuration_v1 *config,
       arrange_layers(output);
       wlr_scene_optimized_blur_set_size(server->blur_layer, wlr_output->width,
                                         wlr_output->height);
+      session_lock_update_output(output);
     }
   }
 
@@ -247,6 +251,7 @@ void server_new_output(struct wl_listener *listener, void *data) {
   wlr_ext_workspace_group_handle_v1_output_enter(server->workspace_group,
                                                  wlr_output);
   arrange_layers(output);
+  session_lock_create_output_state(output);
   update_output_manager_config(server);
   arrange_windows(server);
 }
