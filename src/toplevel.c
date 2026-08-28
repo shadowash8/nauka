@@ -91,14 +91,15 @@ static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
     /* Prefer the previously focused toplevel, if it's still around and
      * on the current tag. */
     if (server->prev_focused != NULL &&
-        server->prev_focused->tag == server->current_tag) {
+        (server->prev_focused->tag == server->current_tag ||
+         server->prev_focused->sticky)) {
       fallback = server->prev_focused;
     }
 
     if (fallback == NULL) {
       struct nauka_toplevel *it;
       wl_list_for_each(it, &server->toplevels, link) {
-        if (it->tag == server->current_tag) {
+        if (it->tag == server->current_tag || it->sticky) {
           fallback = it;
           break;
         }
@@ -122,7 +123,7 @@ static bool toplevel_should_float(struct nauka_toplevel *toplevel) {
 }
 
 bool toplevel_is_visible(struct nauka_toplevel *toplevel) {
-  return toplevel->tag == toplevel->server->current_tag;
+  return toplevel->sticky || toplevel->tag == toplevel->server->current_tag;
 }
 
 static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
@@ -164,8 +165,7 @@ void update_toplevel_visibility(struct nauka_server *server) {
   struct nauka_toplevel *toplevel;
 
   wl_list_for_each(toplevel, &server->toplevels, link) {
-    bool visible = toplevel->tag == server->current_tag;
-
+    bool visible = toplevel->sticky || toplevel->tag == server->current_tag;
     wlr_scene_node_set_enabled(&toplevel->scene_tree->node, visible);
   }
 }
@@ -399,6 +399,9 @@ void server_new_xdg_popup(struct wl_listener *listener, void *data) {
 }
 
 void toplevel_toggle_floating(struct nauka_toplevel *toplevel) {
+  if (toplevel->sticky)
+    return; /* must un-stick first */
+
   struct nauka_server *server = toplevel->server;
   toplevel->floating = !toplevel->floating;
 
@@ -431,6 +434,24 @@ void toplevel_toggle_floating(struct nauka_toplevel *toplevel) {
   }
 
   arrange_windows(server);
+}
+
+void toplevel_toggle_sticky(struct nauka_toplevel *toplevel) {
+  if (toplevel == NULL || toplevel->is_fullscreen)
+    return;
+
+  toplevel->sticky = !toplevel->sticky;
+
+  if (toplevel->sticky && !toplevel->floating) {
+    /* sticky implies floating -- keeps it out of arrange_windows()
+     * entirely, so layout.c needs no awareness of stickiness */
+    toplevel->floating = true;
+    wlr_scene_node_reparent(&toplevel->scene_tree->node,
+                            toplevel->server->floating_tree);
+  }
+
+  update_toplevel_visibility(toplevel->server);
+  arrange_windows(toplevel->server); /* re-flow tiled siblings */
 }
 
 void toplevel_toggle_fullscreen(struct nauka_toplevel *toplevel) {
@@ -477,6 +498,14 @@ void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen) {
     if (toplevel->floating) {
       toplevel_save_floating_geometry(toplevel);
     }
+
+    toplevel->sticky_before_fullscreen = toplevel->sticky;
+    if (toplevel->sticky) {
+      toplevel->tag_before_fullscreen = toplevel->tag;
+      toplevel->sticky = false;
+      toplevel->tag = toplevel->server->current_tag;
+    }
+
     wlr_scene_node_reparent(&toplevel->scene_tree->node,
                             toplevel->server->fullscreen_tree);
   } else {
@@ -488,10 +517,22 @@ void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen) {
     if (toplevel->floating) {
       toplevel_restore_floating_geometry(toplevel);
     }
+
+    if (toplevel->sticky_before_fullscreen) {
+      int fullscreen_tag = toplevel->tag;
+      toplevel->sticky = true;
+      toplevel->sticky_before_fullscreen = false;
+      toplevel->tag = toplevel->tag_before_fullscreen;
+      toplevel->sticky_before_fullscreen = false;
+
+      workspace_update_hidden(toplevel->server, fullscreen_tag);
+      workspace_update_hidden(toplevel->server, toplevel->tag);
+    }
   }
 
   wlr_scene_node_set_enabled(&toplevel->border_tree->node, !fullscreen);
   toplevel_update_blur(toplevel);
 
+  update_toplevel_visibility(toplevel->server);
   arrange_windows(toplevel->server);
 }

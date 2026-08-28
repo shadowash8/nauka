@@ -19,7 +19,7 @@ void arrange_windows(struct nauka_server *server) {
     struct nauka_toplevel *t;
     bool has_fullscreen = false;
     wl_list_for_each(t, &server->toplevels, link) {
-      if (t->tag != server->current_tag)
+      if (t->tag != server->current_tag && !t->sticky)
         continue;
       if (t->is_fullscreen) {
         struct wlr_box full = {0};

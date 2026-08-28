@@ -87,14 +87,14 @@ void view_tag(struct nauka_server *server, int tag) {
   struct nauka_toplevel *toplevel;
 
   wl_list_for_each(toplevel, &server->toplevels, link) {
-    bool visible = toplevel->tag == tag;
+    bool visible = toplevel->sticky || toplevel->tag == tag;
     wlr_scene_node_set_enabled(&toplevel->scene_tree->node, visible);
   }
 
   wlr_seat_keyboard_clear_focus(server->seat);
 
   wl_list_for_each(toplevel, &server->toplevels, link) {
-    if (toplevel->tag == tag) {
+    if (toplevel->tag == tag || toplevel->sticky) {
       focus_toplevel(toplevel);
       break;
     }
@@ -129,7 +129,7 @@ void move_focused_to_tag(struct nauka_server *server, int tag) {
   workspace_update_hidden(server, old_tag);
   workspace_update_hidden(server, tag);
 
-  bool visible = tag == server->current_tag;
+  bool visible = toplevel->sticky || tag == server->current_tag;
 
   wlr_scene_node_set_enabled(&toplevel->scene_tree->node, visible);
 

@@ -18,6 +18,9 @@ struct nauka_toplevel {
   struct wlr_scene_tree *border_tree;
 
   int tag;
+  bool sticky;
+  bool sticky_before_fullscreen;
+  int tag_before_fullscreen;
   bool is_fullscreen;
   bool floating;
   int corner_radius;
@@ -56,3 +59,5 @@ void toplevel_toggle_fullscreen(struct nauka_toplevel *toplevel);
 void toplevel_apply_config(struct nauka_server *server);
 
 void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen);
+
+void toplevel_toggle_sticky(struct nauka_toplevel *toplevel);

@@ -216,6 +216,12 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         }
         break;
       }
+      case NAUKA_ACTION_TOGGLE_STICKY: {
+        if (server->focused_toplevel != NULL) {
+          toplevel_toggle_sticky(server->focused_toplevel);
+        }
+        break;
+      }
       }
 
       handled = true;

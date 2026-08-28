@@ -413,6 +413,8 @@ static void config_parse_line(struct nauka_config *config, char *line,
     kb->action = NAUKA_ACTION_TOGGLE_FLOATING;
   } else if (strcasecmp(action_str, "toggle_fullscreen") == 0) {
     kb->action = NAUKA_ACTION_TOGGLE_FULLSCREEN;
+  } else if (strcasecmp(action_str, "toggle_sticky") == 0) {
+    kb->action = NAUKA_ACTION_TOGGLE_STICKY;
   } else {
     free(kb);
     return;
