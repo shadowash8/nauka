@@ -403,6 +403,8 @@ static void config_parse_line(struct nauka_config *config, char *line,
     kb->action = NAUKA_ACTION_CLOSE_ACTIVE;
   } else if (strcasecmp(action_str, "next_toplevel") == 0) {
     kb->action = NAUKA_ACTION_NEXT_TOPLEVEL;
+  } else if (strcasecmp(action_str, "prev_toplevel") == 0) {
+    kb->action = NAUKA_ACTION_PREV_TOPLEVEL;
   } else if (strcasecmp(action_str, "view_tag") == 0) {
     kb->action = NAUKA_ACTION_VIEW_TAG;
     kb->tag = keysym - XKB_KEY_1;

@@ -6,6 +6,7 @@
 
 #include <scenefx/types/wlr_scene.h>
 #include <wayland-server-core.h>
+#include <wayland-util.h>
 #include <wlr/backend/session.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
@@ -196,6 +197,76 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         if (next != NULL && next != focused) {
           focus_toplevel(next);
         }
+        break;
+      }
+      case NAUKA_ACTION_PREV_TOPLEVEL: {
+        if (server->focused_toplevel != NULL &&
+            server->focused_toplevel->is_fullscreen) {
+          break;
+        }
+
+        if (wl_list_empty(&server->toplevels)) {
+          break;
+        }
+
+        struct nauka_toplevel *focused = NULL;
+        struct nauka_toplevel *it;
+
+        wl_list_for_each(it, &server->toplevels, link) {
+          if (it->xdg_toplevel->current.activated) {
+            focused = it;
+            break;
+          }
+        }
+
+        if (focused == NULL) {
+          /* Nothing focused: grab the last window on the current tag. */
+          wl_list_for_each_reverse(it, &server->toplevels, link) {
+            if (it->tag == server->current_tag) {
+              focus_toplevel(it);
+              break;
+            }
+          }
+          break;
+        }
+
+        struct nauka_toplevel *prev = NULL;
+        bool past_focused = false;
+
+        /*
+         * Walk backwards through the list.
+         * Everything we encounter before `focused` in this traversal
+         * is after `focused` in the normal list order.
+         */
+        wl_list_for_each_reverse(it, &server->toplevels, link) {
+          if (it == focused) {
+            past_focused = true;
+            continue;
+          }
+
+          if (past_focused && it->tag == server->current_tag) {
+            prev = it;
+            break;
+          }
+        }
+
+        /*
+         * We reached the beginning of the list without finding one.
+         * Wrap around to the last window on the current tag.
+         */
+        if (prev == NULL) {
+          wl_list_for_each_reverse(it, &server->toplevels, link) {
+            if (it->tag == server->current_tag) {
+              prev = it;
+              break;
+            }
+          }
+        }
+
+        if (prev != NULL && prev != focused) {
+          focus_toplevel(prev);
+        }
+
         break;
       }
       case NAUKA_ACTION_VIEW_TAG:
