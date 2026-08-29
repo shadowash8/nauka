@@ -332,6 +332,10 @@ static void process_cursor_motion(struct nauka_server *server, uint32_t time) {
      * around the screen, not over any toplevels. */
     wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "default");
   }
+  if (server->config.focus_follows_mouse && toplevel != NULL &&
+      toplevel != server->focused_toplevel) {
+    focus_toplevel(toplevel);
+  }
   if (surface) {
     /*
      * Send pointer enter and motion events.

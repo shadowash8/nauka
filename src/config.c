@@ -16,6 +16,7 @@ static void config_set_defaults(struct nauka_config *config) {
   config->move_button = BTN_LEFT;
   config->resize_button = BTN_RIGHT;
   config->keybinds = NULL;
+  config->focus_follows_mouse = false;
 
   config->border_width = 2;
   config->border_color_active[0] = 0.9f;
@@ -338,6 +339,16 @@ static void config_parse_line(struct nauka_config *config, char *line,
       config->xwayland = strcasecmp(value, "true") == 0 ||
                          strcasecmp(value, "1") == 0 ||
                          strcasecmp(value, "yes") == 0;
+    }
+    return;
+  }
+
+  if (strcmp(directive, "focus_follows_mouse") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      config->focus_follows_mouse = strcasecmp(value, "true") == 0 ||
+                                    strcasecmp(value, "1") == 0 ||
+                                    strcasecmp(value, "yes") == 0;
     }
     return;
   }

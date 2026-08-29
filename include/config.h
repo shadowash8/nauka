@@ -34,6 +34,7 @@ struct nauka_config {
   uint32_t move_button;
   uint32_t resize_button;
   struct nauka_keybind *keybinds;
+  bool focus_follows_mouse;
 
   int border_width;
   float border_color_active[4];
