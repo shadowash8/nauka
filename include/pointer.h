@@ -24,3 +24,5 @@ void seat_request_cursor(struct wl_listener *listener, void *data);
 void seat_request_set_selection(struct wl_listener *listener, void *data);
 
 void reset_cursor_mode(struct nauka_server *server);
+
+void pointer_reload_theme(struct nauka_server *server);

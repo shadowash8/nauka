@@ -40,6 +40,9 @@ static void config_set_defaults(struct nauka_config *config) {
   config->blur_alpha = 1.0f;
 
   config->xwayland = false;
+
+  strcpy(config->cursor_theme, "Adwaita");
+  config->cursor_size = 24;
 }
 
 /* Parses "#rrggbb" or "#rrggbbaa" into a float[4] rgba. Returns false on
@@ -350,6 +353,20 @@ static void config_parse_line(struct nauka_config *config, char *line,
                                     strcasecmp(value, "1") == 0 ||
                                     strcasecmp(value, "yes") == 0;
     }
+    return;
+  }
+
+  if (strcmp(directive, "cursor_theme") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      snprintf(config->cursor_theme, sizeof(config->cursor_theme), "%s", value);
+    return;
+  }
+
+  if (strcmp(directive, "cursor_size") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->cursor_size = atoi(value);
     return;
   }
 

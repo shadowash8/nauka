@@ -209,7 +209,8 @@ int main(int argc, char *argv[]) {
    * Xcursor themes to source cursor images from and makes sure that cursor
    * images are available at all scale factors on the screen (necessary for
    * HiDPI support). */
-  server.cursor_mgr = wlr_xcursor_manager_create(NULL, 24);
+  server.cursor_mgr = NULL;
+  pointer_reload_theme(&server);
 
   /*
    * wlr_cursor *only* displays an image on screen. It does not move around

@@ -51,6 +51,9 @@ struct nauka_config {
 
   struct nauka_autostart *autostart;
   bool xwayland;
+
+  char cursor_theme[256];
+  uint32_t cursor_size;
 };
 
 void parse_file(struct nauka_config *config, const char *path);

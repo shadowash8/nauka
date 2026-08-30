@@ -121,6 +121,7 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         break;
       case NAUKA_ACTION_RELOAD:
         config_reload(&server->config);
+        pointer_reload_theme(server);
         arrange_windows(server);
         toplevel_apply_config(server);
         return true;

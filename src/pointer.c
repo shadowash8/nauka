@@ -14,6 +14,7 @@
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/edges.h>
 
@@ -480,4 +481,25 @@ void server_cursor_frame(struct wl_listener *listener, void *data) {
   struct nauka_server *server = wl_container_of(listener, server, cursor_frame);
   /* Notify the client with pointer focus of the frame event. */
   wlr_seat_pointer_notify_frame(server->seat);
+}
+
+void pointer_reload_theme(struct nauka_server *server) {
+  if (server->cursor_mgr) {
+    wlr_xcursor_manager_destroy(server->cursor_mgr);
+  }
+
+  server->cursor_mgr = wlr_xcursor_manager_create(server->config.cursor_theme,
+                                                  server->config.cursor_size);
+
+  struct nauka_output *output;
+  wl_list_for_each(output, &server->outputs, link) {
+    wlr_xcursor_manager_load(server->cursor_mgr, output->wlr_output->scale);
+  }
+
+  wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "default");
+
+  char size[16];
+  snprintf(size, sizeof(size), "%u", server->config.cursor_size);
+  setenv("XCURSOR_THEME", server->config.cursor_theme, 1);
+  setenv("XCURSOR_SIZE", size, 1);
 }
