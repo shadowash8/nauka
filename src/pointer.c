@@ -6,6 +6,7 @@
 
 #include <linux/input-event-codes.h>
 #include <scenefx/types/wlr_scene.h>
+#include <wlr/backend/libinput.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
@@ -91,11 +92,17 @@ confine_pointer_to_region(struct nauka_server *server,
 
 static void server_new_pointer(struct nauka_server *server,
                                struct wlr_input_device *device) {
-  /* We don't do anything special with pointers. All of our pointer handling
-   * is proxied through wlr_cursor. On another compositor, you might take this
-   * opportunity to do libinput configuration on the device to set
-   * acceleration, etc. */
   wlr_cursor_attach_input_device(server->cursor, device);
+
+  if (!wlr_input_device_is_libinput(device))
+    return;
+
+  struct libinput_device *libinput_dev = wlr_libinput_get_device_handle(device);
+
+  if (libinput_device_config_tap_get_finger_count(libinput_dev) > 0) {
+    libinput_device_config_tap_set_enabled(libinput_dev,
+                                           LIBINPUT_CONFIG_TAP_ENABLED);
+  }
 }
 
 void server_new_input(struct wl_listener *listener, void *data) {

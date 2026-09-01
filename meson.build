@@ -16,6 +16,7 @@ xkbcommon = dependency('xkbcommon')
 wayland_scanner = find_program('wayland-scanner')
 wayland_protocols = dependency('wayland-protocols')
 pixman = dependency('pixman-1')
+libinput = dependency('libinput')
 protocol_dir = wayland_protocols.get_variable('pkgdatadir')
 inc = include_directories('include')
 
@@ -72,6 +73,7 @@ executable(
         wlroots,
         xkbcommon,
         pixman,
+        libinput,
     ],
     install: true,
 )
