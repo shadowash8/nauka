@@ -27,6 +27,7 @@
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/types/wlr_pointer_gestures_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_seat.h>
@@ -241,6 +242,14 @@ int main(int argc, char *argv[]) {
   server.new_pointer_constraint.notify = server_new_pointer_constraint;
   wl_signal_add(&server.pointer_constraints->events.new_constraint,
                 &server.new_pointer_constraint);
+  server.pointer_gestures = wlr_pointer_gestures_v1_create(server.wl_display);
+  server.cursor_pinch_begin.notify = server_cursor_pinch_begin;
+  wl_signal_add(&server.cursor->events.pinch_begin, &server.cursor_pinch_begin);
+  server.cursor_pinch_update.notify = server_cursor_pinch_update;
+  wl_signal_add(&server.cursor->events.pinch_update,
+                &server.cursor_pinch_update);
+  server.cursor_pinch_end.notify = server_cursor_pinch_end;
+  wl_signal_add(&server.cursor->events.pinch_end, &server.cursor_pinch_end);
 
   /*
    * Configures a seat, which is a single "seat" at which a user sits and
@@ -358,6 +367,9 @@ int main(int argc, char *argv[]) {
   wl_list_remove(&server.request_set_selection.link);
   wl_list_remove(&server.request_start_drag.link);
   wl_list_remove(&server.start_drag.link);
+  wl_list_remove(&server.cursor_pinch_begin.link);
+  wl_list_remove(&server.cursor_pinch_update.link);
+  wl_list_remove(&server.cursor_pinch_end.link);
 
   wl_list_remove(&server.new_output.link);
   wl_list_remove(&server.output_manager_apply.link);

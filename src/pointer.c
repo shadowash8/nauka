@@ -13,6 +13,7 @@
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/types/wlr_pointer_gestures_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -509,4 +510,29 @@ void pointer_reload_theme(struct nauka_server *server) {
   snprintf(size, sizeof(size), "%u", server->config.cursor_size);
   setenv("XCURSOR_THEME", server->config.cursor_theme, 1);
   setenv("XCURSOR_SIZE", size, 1);
+}
+
+void server_cursor_pinch_begin(struct wl_listener *listener, void *data) {
+  struct nauka_server *server =
+      wl_container_of(listener, server, cursor_pinch_begin);
+  struct wlr_pointer_pinch_begin_event *event = data;
+  wlr_pointer_gestures_v1_send_pinch_begin(
+      server->pointer_gestures, server->seat, event->time_msec, event->fingers);
+}
+
+void server_cursor_pinch_update(struct wl_listener *listener, void *data) {
+  struct nauka_server *server =
+      wl_container_of(listener, server, cursor_pinch_update);
+  struct wlr_pointer_pinch_update_event *event = data;
+  wlr_pointer_gestures_v1_send_pinch_update(
+      server->pointer_gestures, server->seat, event->time_msec, event->dx,
+      event->dy, event->scale, event->rotation);
+}
+
+void server_cursor_pinch_end(struct wl_listener *listener, void *data) {
+  struct nauka_server *server =
+      wl_container_of(listener, server, cursor_pinch_end);
+  struct wlr_pointer_pinch_end_event *event = data;
+  wlr_pointer_gestures_v1_send_pinch_end(server->pointer_gestures, server->seat,
+                                         event->time_msec, event->cancelled);
 }
