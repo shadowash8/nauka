@@ -35,6 +35,8 @@
 #include <wlr/types/wlr_session_lock_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_viewporter.h>
+#include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
@@ -113,6 +115,10 @@ int main(int argc, char *argv[]) {
   wlr_data_control_manager_v1_create(server.wl_display);
   wlr_screencopy_manager_v1_create(server.wl_display);
   wlr_viewporter_create(server.wl_display);
+  server.virtual_pointer_manager =
+      wlr_virtual_pointer_manager_v1_create(server.wl_display);
+  server.virtual_keyboard_manager =
+      wlr_virtual_keyboard_manager_v1_create(server.wl_display);
 
   /* Creates an output layout, which a wlroots utility for working with an
    * arrangement of screens in a physical layout. */

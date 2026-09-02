@@ -43,6 +43,8 @@ static void config_set_defaults(struct nauka_config *config) {
 
   strcpy(config->cursor_theme, "Adwaita");
   config->cursor_size = 24;
+  strcpy(config->keyboard_layout, "us");
+  config->keyboard_variant[0] = '\0';
 }
 
 /* Parses "#rrggbb" or "#rrggbbaa" into a float[4] rgba. Returns false on
@@ -367,6 +369,22 @@ static void config_parse_line(struct nauka_config *config, char *line,
     char *value = next_token(&cursor);
     if (value != NULL)
       config->cursor_size = atoi(value);
+    return;
+  }
+
+  if (strcmp(directive, "keyboard_layout") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      snprintf(config->keyboard_layout, sizeof(config->keyboard_layout), "%s",
+               value);
+    return;
+  }
+
+  if (strcmp(directive, "keyboard_variant") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      snprintf(config->keyboard_variant, sizeof(config->keyboard_variant), "%s",
+               value);
     return;
   }
 

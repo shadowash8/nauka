@@ -54,6 +54,8 @@ struct nauka_config {
 
   char cursor_theme[256];
   uint32_t cursor_size;
+  char keyboard_layout[32];
+  char keyboard_variant[32];
 };
 
 void parse_file(struct nauka_config *config, const char *path);

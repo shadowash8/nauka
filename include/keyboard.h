@@ -17,6 +17,9 @@ void seat_focus_surface(struct nauka_server *server,
 
 void focus_toplevel(struct nauka_toplevel *toplevel);
 
+void keyboard_apply_keymap(struct nauka_server *server,
+                           struct wlr_keyboard *wlr_keyboard);
+
 void server_new_keyboard(struct nauka_server *server,
                          struct wlr_input_device *device);
 

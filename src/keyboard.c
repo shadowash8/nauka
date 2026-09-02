@@ -122,6 +122,10 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
       case NAUKA_ACTION_RELOAD:
         config_reload(&server->config);
         pointer_reload_theme(server);
+        struct nauka_keyboard *kbd;
+        wl_list_for_each(kbd, &server->keyboards, link) {
+          keyboard_apply_keymap(server, kbd->wlr_keyboard);
+        }
         arrange_windows(server);
         toplevel_apply_config(server);
         return true;
@@ -368,6 +372,25 @@ static void keyboard_handle_destroy(struct wl_listener *listener, void *data) {
   free(keyboard);
 }
 
+void keyboard_apply_keymap(struct nauka_server *server,
+                           struct wlr_keyboard *wlr_keyboard) {
+  struct xkb_rule_names rules = {
+      .layout = server->config.keyboard_layout,
+      .variant = server->config.keyboard_variant[0]
+                     ? server->config.keyboard_variant
+                     : NULL,
+  };
+
+  struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+  struct xkb_keymap *keymap =
+      xkb_keymap_new_from_names(context, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+
+  wlr_keyboard_set_keymap(wlr_keyboard, keymap);
+
+  xkb_keymap_unref(keymap);
+  xkb_context_unref(context);
+}
+
 void server_new_keyboard(struct nauka_server *server,
                          struct wlr_input_device *device) {
   struct wlr_keyboard *wlr_keyboard = wlr_keyboard_from_input_device(device);
@@ -376,15 +399,7 @@ void server_new_keyboard(struct nauka_server *server,
   keyboard->server = server;
   keyboard->wlr_keyboard = wlr_keyboard;
 
-  /* We need to prepare an XKB keymap and assign it to the keyboard. This
-   * assumes the defaults (e.g. layout = "us"). */
-  struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-  struct xkb_keymap *keymap =
-      xkb_keymap_new_from_names(context, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
-
-  wlr_keyboard_set_keymap(wlr_keyboard, keymap);
-  xkb_keymap_unref(keymap);
-  xkb_context_unref(context);
+  keyboard_apply_keymap(server, wlr_keyboard);
   wlr_keyboard_set_repeat_info(wlr_keyboard, 25, 600);
 
   /* Here we set up listeners for keyboard events. */
