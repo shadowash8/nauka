@@ -252,6 +252,15 @@ static void config_parse_line(struct nauka_config *config, char *line,
     return;
   }
 
+  if (strcmp(directive, "env") == 0) {
+    char *key = next_token(&cursor);
+    char *value = next_token(&cursor);
+
+    if (key && value)
+      setenv(key, value, 1);
+    return;
+  }
+
   if (strcmp(directive, "border_width") == 0) {
     char *value = next_token(&cursor);
     if (value != NULL) {
