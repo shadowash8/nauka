@@ -16,11 +16,9 @@
         pname = "nauka";
         version = "main";
 
-        src = pkgs.fetchFromGitHub {
-          owner = "shadowash8";
-          repo = "nauka";
-          rev = "main";
-          hash = "sha256-pD439Emit1XgluVvWgZJh/vkckUk5JStf+sTALRHXBM=";
+        src = builtins.fetchGit {
+          url = "https://github.com/shadowash8/nauka.git";
+          ref = "refs/heads/main";
         };
 
         nativeBuildInputs = with pkgs; [
