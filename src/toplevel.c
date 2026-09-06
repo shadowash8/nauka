@@ -258,6 +258,11 @@ static void xdg_toplevel_request_maximize(struct wl_listener *listener,
 static void xdg_toplevel_request_fullscreen(struct wl_listener *listener,
                                             void *data) {
   struct nauka_toplevel *t = wl_container_of(listener, t, request_fullscreen);
+
+  if (!t->xdg_toplevel->base->initialized) {
+    return;
+  }
+
   toplevel_set_fullscreen(t, t->xdg_toplevel->requested.fullscreen);
 }
 
@@ -502,6 +507,9 @@ toplevel_restore_floating_geometry(struct nauka_toplevel *toplevel) {
 }
 
 void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen) {
+  if (!toplevel->xdg_toplevel->base->initialized)
+    return;
+
   toplevel->is_fullscreen = fullscreen;
   wlr_xdg_toplevel_set_fullscreen(toplevel->xdg_toplevel, fullscreen);
 
