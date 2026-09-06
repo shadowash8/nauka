@@ -61,3 +61,5 @@ void toplevel_apply_config(struct nauka_server *server);
 void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen);
 
 void toplevel_toggle_sticky(struct nauka_toplevel *toplevel);
+
+void toplevel_swap(struct nauka_toplevel *a, struct nauka_toplevel *b);

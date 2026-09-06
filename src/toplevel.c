@@ -547,3 +547,28 @@ void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen) {
   update_toplevel_visibility(toplevel->server);
   arrange_windows(toplevel->server);
 }
+
+void toplevel_swap(struct nauka_toplevel *a, struct nauka_toplevel *b) {
+  if (!a || !b || a == b)
+    return;
+
+  struct wl_list *a_prev = a->link.prev;
+  struct wl_list *b_prev = b->link.prev;
+
+  wl_list_remove(&a->link);
+  wl_list_remove(&b->link);
+
+  if (a_prev == &b->link) {
+    wl_list_insert(b_prev, &a->link);
+    wl_list_insert(&a->link, &b->link);
+  } else if (b_prev == &a->link) {
+    wl_list_insert(a_prev, &b->link);
+    wl_list_insert(&b->link, &a->link);
+  } else {
+    wl_list_insert(a_prev, &b->link);
+    wl_list_insert(b_prev, &a->link);
+  }
+
+  arrange_windows(a->server);
+  focus_toplevel(a);
+}
