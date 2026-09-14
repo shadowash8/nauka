@@ -18,6 +18,7 @@
 #include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_ext_workspace_v1.h>
+#include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
@@ -132,8 +133,16 @@ int main(int argc, char *argv[]) {
   wl_signal_add(&server.output_manager->events.test,
                 &server.output_manager_test);
 
-  /* Configure a listener to be notified when new outputs are available on the
-   * backend. */
+  /* Implement Gamma Control */
+  server.gamma_control_manager =
+      wlr_gamma_control_manager_v1_create(server.wl_display);
+
+  server.set_gamma.notify = gamma_control_set_gamma;
+  wl_signal_add(&server.gamma_control_manager->events.set_gamma,
+                &server.set_gamma);
+
+  /* Configure a listener to be notified when new outputs are available on
+   * the backend. */
   wl_list_init(&server.outputs);
   server.new_output.notify = server_new_output;
   wl_signal_add(&server.backend->events.new_output, &server.new_output);
@@ -380,6 +389,8 @@ int main(int argc, char *argv[]) {
   wl_list_remove(&server.new_output.link);
   wl_list_remove(&server.output_manager_apply.link);
   wl_list_remove(&server.output_manager_test.link);
+
+  wl_list_remove(&server.set_gamma.link);
 
   wlr_scene_node_destroy(&server.scene->tree.node);
   wlr_xcursor_manager_destroy(server.cursor_mgr);

@@ -22,3 +22,4 @@ void server_new_output(struct wl_listener *listener, void *data);
 void update_output_manager_config(struct nauka_server *server);
 void output_manager_apply(struct wl_listener *listener, void *data);
 void output_manager_test(struct wl_listener *listener, void *data);
+void gamma_control_set_gamma(struct wl_listener *listener, void *data);

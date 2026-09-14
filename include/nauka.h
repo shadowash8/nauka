@@ -95,6 +95,9 @@ struct nauka_server {
   struct wl_listener output_manager_apply;
   struct wl_listener output_manager_test;
 
+  struct wlr_gamma_control_manager_v1 *gamma_control_manager;
+  struct wl_listener set_gamma;
+
   struct nauka_config config;
   int current_tag;
 

@@ -4,6 +4,7 @@
 
 #include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_ext_workspace_v1.h>
+#include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
@@ -254,4 +255,28 @@ void server_new_output(struct wl_listener *listener, void *data) {
   session_lock_create_output_state(output);
   update_output_manager_config(server);
   arrange_windows(server);
+}
+
+void gamma_control_set_gamma(struct wl_listener *listener, void *data) {
+  struct nauka_server *server = wl_container_of(listener, server, set_gamma);
+
+  struct wlr_gamma_control_manager_v1_set_gamma_event *event = data;
+
+  struct wlr_output_state state;
+  wlr_output_state_init(&state);
+
+  struct wlr_gamma_control_v1 *control =
+      wlr_gamma_control_manager_v1_get_control(server->gamma_control_manager,
+                                               event->output);
+
+  if (!wlr_gamma_control_v1_apply(control, &state)) {
+    wlr_output_state_finish(&state);
+    return;
+  }
+
+  if (!wlr_output_commit_state(event->output, &state)) {
+    wlr_gamma_control_v1_send_failed_and_destroy(control);
+  }
+
+  wlr_output_state_finish(&state);
 }
