@@ -550,7 +550,6 @@ void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen) {
   }
 
   wlr_scene_node_set_enabled(&toplevel->border_tree->node, !fullscreen);
-  toplevel_update_blur(toplevel);
 
   update_toplevel_visibility(toplevel->server);
   arrange_windows(toplevel->server);

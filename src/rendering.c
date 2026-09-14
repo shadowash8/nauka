@@ -197,7 +197,7 @@ static void iter_buffer_apply_effects(struct wlr_scene_buffer *buffer, int lx,
 
   struct wlr_scene_blur *blur = buffer_ensure_blur(buffer);
 
-  if (!config->blur || toplevel->is_fullscreen) {
+  if (!config->blur) {
     wlr_scene_node_set_enabled(&blur->node, false);
     return;
   }
