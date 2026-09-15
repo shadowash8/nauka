@@ -29,6 +29,7 @@
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_pointer_gestures_v1.h>
+#include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_seat.h>
@@ -140,6 +141,13 @@ int main(int argc, char *argv[]) {
   server.set_gamma.notify = gamma_control_set_gamma;
   wl_signal_add(&server.gamma_control_manager->events.set_gamma,
                 &server.set_gamma);
+
+  server.presentation =
+      wlr_presentation_create(server.wl_display, server.backend, 2);
+  if (server.presentation == NULL) {
+    wlr_log(WLR_ERROR, "failed to create wlr_presentation");
+    return 1;
+  }
 
   /* Configure a listener to be notified when new outputs are available on
    * the backend. */
