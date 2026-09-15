@@ -368,6 +368,10 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         }
         break;
       }
+      case NAUKA_ACTION_SET_LAYOUT: {
+        layout_set(server, (enum nauka_layout_mode)kb->layout);
+        break;
+      }
       }
 
       handled = true;

@@ -15,6 +15,7 @@ enum nauka_keybind_action {
   NAUKA_ACTION_TOGGLE_FLOATING,
   NAUKA_ACTION_TOGGLE_FULLSCREEN,
   NAUKA_ACTION_TOGGLE_STICKY,
+  NAUKA_ACTION_SET_LAYOUT,
 };
 
 struct nauka_keybind {
@@ -24,6 +25,7 @@ struct nauka_keybind {
   char *command;
   struct nauka_keybind *next;
   int tag;
+  int layout;
 };
 
 struct nauka_autostart {
@@ -58,6 +60,8 @@ struct nauka_config {
   uint32_t cursor_size;
   char keyboard_layout[32];
   char keyboard_variant[32];
+
+  double master_factor;
 };
 
 void parse_file(struct nauka_config *config, const char *path);

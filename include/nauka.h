@@ -102,6 +102,7 @@ struct nauka_server {
 
   struct nauka_config config;
   int current_tag;
+  enum nauka_layout_mode current_layout;
 
   struct wlr_ext_workspace_manager_v1 *workspace_manager;
   struct wlr_ext_workspace_group_handle_v1 *workspace_group;

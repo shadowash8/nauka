@@ -1,4 +1,5 @@
 #include "config.h"
+#include "layout.h"
 
 #include <libgen.h>
 #include <limits.h>
@@ -476,6 +477,21 @@ static void config_parse_line(struct nauka_config *config, char *line,
     kb->action = NAUKA_ACTION_TOGGLE_FULLSCREEN;
   } else if (strcasecmp(action_str, "toggle_sticky") == 0) {
     kb->action = NAUKA_ACTION_TOGGLE_STICKY;
+  } else if (strcasecmp(action_str, "layout") == 0) {
+    char *layout_name = next_token(&cursor);
+    if (layout_name == NULL) {
+      free(kb);
+      return;
+    }
+    if (strcasecmp(layout_name, "grid") == 0) {
+      kb->layout = NAUKA_LAYOUT_GRID;
+    } else if (strcasecmp(layout_name, "master") == 0) {
+      kb->layout = NAUKA_LAYOUT_MASTER;
+    } else {
+      free(kb);
+      return; /* unrecognized layout name */
+    }
+    kb->action = NAUKA_ACTION_SET_LAYOUT;
   } else {
     free(kb);
     return;
