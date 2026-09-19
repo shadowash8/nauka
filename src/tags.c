@@ -93,12 +93,24 @@ void view_tag(struct nauka_server *server, int tag) {
 
   wlr_seat_keyboard_clear_focus(server->seat);
 
+  struct nauka_toplevel *to_focus = NULL;
+  struct nauka_toplevel *sticky_fallback = NULL;
+
   wl_list_for_each(toplevel, &server->toplevels, link) {
-    if (toplevel->tag == tag || toplevel->sticky) {
-      focus_toplevel(toplevel);
+    if (toplevel->tag == tag && !toplevel->sticky) {
+      to_focus = toplevel;
       break;
     }
+    if (toplevel->sticky && sticky_fallback == NULL) {
+      sticky_fallback = toplevel;
+    }
   }
+
+  if (to_focus == NULL)
+    to_focus = sticky_fallback;
+
+  if (to_focus != NULL)
+    focus_toplevel(to_focus);
 
   arrange_windows(server);
 }
