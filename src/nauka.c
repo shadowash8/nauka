@@ -46,6 +46,15 @@
 #include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
 
+static int handle_sigchld(int signal_number, void *data) {
+  pid_t pid;
+  int status;
+  while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+    wlr_log(WLR_DEBUG, "reaped child pid %d", pid);
+  }
+  return 1;
+}
+
 /* For brevity's sake, struct members are annotated where they are used. */
 int main(int argc, char *argv[]) {
   wlr_log_init(WLR_DEBUG, NULL);
@@ -71,6 +80,9 @@ int main(int argc, char *argv[]) {
   /* The Wayland display is managed by libwayland. It handles accepting
    * clients from the Unix socket, managing Wayland globals, and so on. */
   server.wl_display = wl_display_create();
+  struct wl_event_loop *loop = wl_display_get_event_loop(server.wl_display);
+  struct wl_event_source *sigchld_source =
+      wl_event_loop_add_signal(loop, SIGCHLD, handle_sigchld, &server);
   /* The backend is a wlroots feature which abstracts the underlying input and
    * output hardware. The autocreate option will choose the most suitable
    * backend based on the current environment, such as opening an X11 window
@@ -407,6 +419,7 @@ int main(int argc, char *argv[]) {
   wlr_allocator_destroy(server.allocator);
   wlr_renderer_destroy(server.renderer);
   wlr_backend_destroy(server.backend);
+  wl_event_source_remove(sigchld_source);
   wl_display_destroy(server.wl_display);
   return 0;
 }
