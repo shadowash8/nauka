@@ -455,6 +455,28 @@ void toplevel_toggle_sticky(struct nauka_toplevel *toplevel) {
       toplevel->floating = true;
       wlr_scene_node_reparent(&toplevel->scene_tree->node,
                               server->floating_tree);
+
+      struct wlr_output *output = wlr_output_layout_output_at(
+          server->output_layout, server->cursor->x, server->cursor->y);
+      struct wlr_box box = {0};
+      if (output != NULL) {
+        wlr_output_layout_get_box(server->output_layout, output, &box);
+      }
+
+      int width = box.width / 2;
+      int height = box.height / 2;
+
+      toplevel->floating_geometry = (struct wlr_box){
+          .x = box.x + (box.width - width) / 2,
+          .y = box.y + (box.height - height) / 2,
+          .width = width,
+          .height = height,
+      };
+
+      wlr_scene_node_set_position(&toplevel->scene_tree->node,
+                                  toplevel->floating_geometry.x,
+                                  toplevel->floating_geometry.y);
+      wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, width, height);
     }
   } else {
     int old_tag = toplevel->tag;
