@@ -6,6 +6,23 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
+static int get_focus_index(struct nauka_server *server) {
+  int i = 0;
+  struct nauka_toplevel *t;
+
+  wl_list_for_each(t, &server->toplevels, link) {
+    if (t->floating || !toplevel_is_visible(t))
+      continue;
+
+    if (t == server->focused_toplevel)
+      return i;
+
+    i++;
+  }
+
+  return 0;
+}
+
 static void arrange_grid(struct nauka_server *server, struct wlr_box area) {
   int inner = server->config.inner_gap;
 
@@ -82,6 +99,45 @@ static void arrange_master(struct nauka_server *server, struct wlr_box area) {
   }
 }
 
+static void arrange_scroller(struct nauka_server *server, struct wlr_box area) {
+  int gap = server->config.inner_gap;
+
+  struct nauka_toplevel *wins[128];
+  int n = 0;
+
+  struct nauka_toplevel *t;
+  wl_list_for_each(t, &server->toplevels, link) {
+    if (t->floating || !toplevel_is_visible(t))
+      continue;
+    wins[n++] = t;
+  }
+
+  if (n == 0)
+    return;
+
+  int focused = get_focus_index(server);
+
+  int ww = area.width * 0.80;
+  int wh = area.height;
+  int center = area.x + (area.width - ww) / 2;
+
+  for (int i = 0; i < n; i++) {
+    int offset = i - focused;
+    int x = center + offset * (ww + gap);
+
+    wlr_scene_node_set_position(&wins[i]->scene_tree->node, x, area.y);
+    wlr_xdg_toplevel_set_size(wins[i]->xdg_toplevel, ww, wh);
+  }
+
+  for (int i = 0; i < focused; i++)
+    wlr_scene_node_raise_to_top(&wins[i]->scene_tree->node);
+
+  for (int i = focused + 1; i < n; i++)
+    wlr_scene_node_raise_to_top(&wins[i]->scene_tree->node);
+
+  wlr_scene_node_raise_to_top(&wins[focused]->scene_tree->node);
+}
+
 void arrange_windows(struct nauka_server *server) {
   struct nauka_output *output;
   wl_list_for_each(output, &server->outputs, link) {
@@ -113,6 +169,9 @@ void arrange_windows(struct nauka_server *server) {
     switch (server->current_layout) {
     case NAUKA_LAYOUT_MASTER:
       arrange_master(server, area);
+      break;
+    case NAUKA_LAYOUT_SCROLLER:
+      arrange_scroller(server, area);
       break;
     case NAUKA_LAYOUT_GRID:
     default:

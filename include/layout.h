@@ -3,6 +3,7 @@ struct nauka_server;
 enum nauka_layout_mode {
   NAUKA_LAYOUT_GRID = 0,
   NAUKA_LAYOUT_MASTER,
+  NAUKA_LAYOUT_SCROLLER,
   NAUKA_LAYOUT_COUNT,
 };
 

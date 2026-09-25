@@ -61,6 +61,13 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
   }
   server->focused_toplevel = toplevel;
 
+  /* Focused scroller window should always be on top */
+  if (!toplevel->floating && !toplevel->is_fullscreen) {
+    wlr_scene_node_raise_to_top(&toplevel->scene_tree->node);
+  }
+
+  arrange_windows(server);
+
   wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, true);
   toplevel_set_border_color(toplevel, true);
   toplevel_update_opacity(toplevel, true);

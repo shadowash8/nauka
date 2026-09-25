@@ -487,6 +487,8 @@ static void config_parse_line(struct nauka_config *config, char *line,
       kb->layout = NAUKA_LAYOUT_GRID;
     } else if (strcasecmp(layout_name, "master") == 0) {
       kb->layout = NAUKA_LAYOUT_MASTER;
+    } else if (strcasecmp(layout_name, "scroller") == 0) {
+      kb->layout = NAUKA_LAYOUT_SCROLLER;
     } else {
       free(kb);
       return; /* unrecognized layout name */
