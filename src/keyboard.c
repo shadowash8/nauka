@@ -60,6 +60,7 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
     server->prev_focused = server->focused_toplevel;
   }
   server->focused_toplevel = toplevel;
+  server->tag_focus[toplevel->tag] = toplevel;
 
   /* Focused scroller window should always be on top */
   if (!toplevel->floating && !toplevel->is_fullscreen) {

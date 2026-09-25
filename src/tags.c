@@ -93,21 +93,25 @@ void view_tag(struct nauka_server *server, int tag) {
 
   wlr_seat_keyboard_clear_focus(server->seat);
 
-  struct nauka_toplevel *to_focus = NULL;
+  struct nauka_toplevel *to_focus = server->tag_focus[tag];
   struct nauka_toplevel *sticky_fallback = NULL;
 
-  wl_list_for_each(toplevel, &server->toplevels, link) {
-    if (toplevel->tag == tag && !toplevel->sticky) {
-      to_focus = toplevel;
-      break;
-    }
-    if (toplevel->sticky && sticky_fallback == NULL) {
-      sticky_fallback = toplevel;
-    }
-  }
+  /* If the remembered window no longer exists, fall back */
+  if (to_focus == NULL || to_focus->tag != tag) {
+    to_focus = NULL;
 
-  if (to_focus == NULL)
-    to_focus = sticky_fallback;
+    wl_list_for_each(toplevel, &server->toplevels, link) {
+      if (toplevel->tag == tag && !toplevel->sticky) {
+        to_focus = toplevel;
+        break;
+      }
+      if (toplevel->sticky && sticky_fallback == NULL)
+        sticky_fallback = toplevel;
+    }
+
+    if (to_focus == NULL)
+      to_focus = sticky_fallback;
+  }
 
   if (to_focus != NULL)
     focus_toplevel(to_focus);
