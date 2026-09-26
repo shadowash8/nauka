@@ -1,3 +1,4 @@
+#include "layout.h"
 #include <stdint.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -61,6 +62,7 @@ struct nauka_config {
   char keyboard_layout[32];
   char keyboard_variant[32];
 
+  enum nauka_layout_mode default_layout;
   double master_factor;
 };
 

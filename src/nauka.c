@@ -169,6 +169,7 @@ int main(int argc, char *argv[]) {
 
   /* Load config before anything that uses config */
   config_load(&server.config);
+  server.current_layout = server.config.default_layout;
 
   /* Initialize fixed tags + ext-workspace-v1 */
   tags_init(&server);

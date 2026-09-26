@@ -42,6 +42,8 @@ static void config_set_defaults(struct nauka_config *config) {
 
   config->xwayland = false;
 
+  config->default_layout = NAUKA_LAYOUT_GRID;
+
   strcpy(config->cursor_theme, "Adwaita");
   config->cursor_size = 24;
   strcpy(config->keyboard_layout, "us");
@@ -395,6 +397,20 @@ static void config_parse_line(struct nauka_config *config, char *line,
     if (value != NULL)
       snprintf(config->keyboard_variant, sizeof(config->keyboard_variant), "%s",
                value);
+    return;
+  }
+
+  if (strcmp(directive, "default_layout") == 0) {
+    char *value = next_token(&cursor);
+    if (value == NULL)
+      return;
+    if (strcasecmp(value, "grid") == 0) {
+      config->default_layout = NAUKA_LAYOUT_GRID;
+    } else if (strcasecmp(value, "master") == 0) {
+      config->default_layout = NAUKA_LAYOUT_MASTER;
+    } else if (strcasecmp(value, "scroller") == 0) {
+      config->default_layout = NAUKA_LAYOUT_SCROLLER;
+    }
     return;
   }
 
