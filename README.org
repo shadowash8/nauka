@@ -7,6 +7,7 @@ nauka is a small and minimal Wayland compositor with all the eye candy one needs
 
 - *lightweight & fast*: minimal footprint, builds in seconds.
 - *tags*: each window has its assigned tags.
+- *layouts*: various layouts like master, grid and scroller
 - *eye-candy*: border radius, opacity, and blur are everything one needs.
 - *hot reload config*: easy configuration language.
 
