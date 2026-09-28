@@ -59,6 +59,9 @@ struct nauka_config {
   float blur_strength;
   float blur_alpha;
 
+  unsigned int animation_duration;
+  float animation_curve[4];
+
   struct nauka_autostart *autostart;
   bool xwayland;
 

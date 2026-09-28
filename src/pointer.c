@@ -218,6 +218,7 @@ void reset_cursor_mode(struct nauka_server *server) {
 static void process_cursor_move(struct nauka_server *server) {
   /* Move the grabbed toplevel to the new position. */
   struct nauka_toplevel *toplevel = server->grabbed_toplevel;
+  toplevel->animating = false;
   wlr_scene_node_set_position(&toplevel->scene_tree->node,
                               server->cursor->x - server->grab_x,
                               server->cursor->y - server->grab_y);
@@ -241,6 +242,8 @@ static void process_cursor_resize(struct nauka_server *server) {
   int new_right = server->grab_geobox.x + server->grab_geobox.width;
   int new_top = server->grab_geobox.y;
   int new_bottom = server->grab_geobox.y + server->grab_geobox.height;
+
+  toplevel->animating = false;
 
   if (server->resize_edges & WLR_EDGE_TOP) {
     new_top = border_y;

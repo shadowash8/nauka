@@ -54,6 +54,7 @@ executable(
     'nauka',
     generated + [
         'src/nauka.c',
+        'src/animation.c',
         'src/config.c',
         'src/decoration.c',
         'src/keyboard.c',

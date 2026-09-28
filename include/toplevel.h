@@ -32,6 +32,10 @@ struct nauka_toplevel {
   struct wlr_scene_blur *blur;
   struct wlr_scene_rect *border;
   struct wlr_box floating_geometry;
+
+  struct wlr_box anim_from, anim_to;
+  uint32_t anim_start;
+  bool animating;
 };
 
 struct nauka_popup {
