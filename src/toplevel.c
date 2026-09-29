@@ -47,18 +47,24 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
      * initially committed */
     wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, width, height);
 
-    wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
+    if (toplevel->server->config.new_window_at_bottom)
+      wl_list_insert(toplevel->server->toplevels.prev,
+                     &toplevel->link); /* tail */
+    else
+      wl_list_insert(&toplevel->server->toplevels, &toplevel->link); /* head */
     toplevel_update_borders(toplevel);
     toplevel_update_blur(toplevel);
     toplevel_update_opacity(toplevel,
                             toplevel == toplevel->server->focused_toplevel);
     focus_toplevel(toplevel);
-    /* deliberately skip arrange_windows() — floaters don't participate
-     * in the tiling layout */
     return;
   }
 
-  wl_list_insert(&toplevel->server->toplevels, &toplevel->link);
+  if (toplevel->server->config.new_window_at_bottom)
+    wl_list_insert(toplevel->server->toplevels.prev,
+                   &toplevel->link); /* tail */
+  else
+    wl_list_insert(&toplevel->server->toplevels, &toplevel->link); /* head */
   toplevel_update_borders(toplevel);
   toplevel_update_blur(toplevel);
   toplevel_update_opacity(toplevel,

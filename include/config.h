@@ -66,6 +66,7 @@ struct nauka_config {
 
   enum nauka_layout_mode default_layout;
   double master_factor;
+  bool new_window_at_bottom;
 };
 
 void parse_file(struct nauka_config *config, const char *path);

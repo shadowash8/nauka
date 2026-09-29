@@ -44,6 +44,7 @@ static void config_set_defaults(struct nauka_config *config) {
 
   config->master_factor = 0.55;
   config->default_layout = NAUKA_LAYOUT_GRID;
+  config->new_window_at_bottom = false;
 
   strcpy(config->cursor_theme, "Adwaita");
   config->cursor_size = 24;
@@ -419,6 +420,17 @@ static void config_parse_line(struct nauka_config *config, char *line,
     char *value = next_token(&cursor);
     if (value != NULL)
       config->master_factor = atof(value);
+    return;
+  }
+
+  if (strcmp(directive, "new_window_position") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      if (strcasecmp(value, "bottom") == 0)
+        config->new_window_at_bottom = true;
+      else if (strcasecmp(value, "top") == 0)
+        config->new_window_at_bottom = false;
+    }
     return;
   }
 
