@@ -77,6 +77,7 @@ struct nauka_server {
   struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard_manager;
   enum nauka_cursor_mode cursor_mode;
   struct nauka_toplevel *grabbed_toplevel;
+  struct nauka_toplevel *last_tiled_focus;
   double grab_x, grab_y;
   struct wlr_box grab_geobox;
   uint32_t resize_edges;

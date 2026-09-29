@@ -62,6 +62,11 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
   server->focused_toplevel = toplevel;
   server->tag_focus[toplevel->tag] = toplevel;
 
+  /* Remember last tiled focused window */
+  if (!toplevel->floating) {
+    server->last_tiled_focus = toplevel;
+  }
+
   /* Focused scroller window should always be on top */
   if (!toplevel->floating && !toplevel->is_fullscreen) {
     wlr_scene_node_raise_to_top(&toplevel->scene_tree->node);

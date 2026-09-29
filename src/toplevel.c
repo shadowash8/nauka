@@ -89,6 +89,10 @@ static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
     server->prev_focused = NULL;
   }
 
+  if (server->last_tiled_focus == toplevel) {
+    server->last_tiled_focus = NULL;
+  }
+
   for (int i = 0; i < NAUKA_TAG_COUNT; i++) {
     if (server->tag_focus[i] == toplevel) {
       server->tag_focus[i] = NULL;

@@ -9,12 +9,13 @@
 static int get_focus_index(struct nauka_server *server) {
   int i = 0;
   struct nauka_toplevel *t;
+  struct nauka_toplevel *target = server->last_tiled_focus;
 
   wl_list_for_each(t, &server->toplevels, link) {
     if (t->floating || !toplevel_is_visible(t))
       continue;
 
-    if (t == server->focused_toplevel)
+    if (t == target)
       return i;
 
     i++;
