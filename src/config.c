@@ -286,32 +286,27 @@ static void config_parse_line(struct nauka_config *config, char *line,
     return;
   }
 
-  if (strcmp(directive, "animation_curve") == 0) {
-	  char *value = next_token(&cursor);
+if (strcmp(directive, "animation_curve") == 0) {
+	char *value = skip_ws(cursor);
 
-      if (value != NULL) {
-          char *src = value;
-          char *dst = value;
-          while (*src) {
-              if (!isspace((unsigned char)*src))
-                  *dst++ = *src;
-              src++;
-          }
-          *dst = '\0';
-          float a, b, c, d;
-          if (sscanf(value, "%f,%f,%f,%f", &a, &b, &c, &d) == 4) {
-              config->animation_curve[0] = a;
-              config->animation_curve[1] = b;
-              config->animation_curve[2] = c;
-              config->animation_curve[3] = d;
-          } else {
-              config->animation_curve[0] = 0.42f;
-              config->animation_curve[1] = 0.0f;
-              config->animation_curve[2] = 0.58f;
-              config->animation_curve[3] = 1.0f;
-          }
-      }
-  }
+	if (*value != '\0') {
+		float a, b, c, d;
+
+		if (sscanf(value, "%f , %f , %f , %f", &a, &b, &c, &d) == 4) {
+			config->animation_curve[0] = a;
+			config->animation_curve[1] = b;
+			config->animation_curve[2] = c;
+			config->animation_curve[3] = d;
+		} else {
+			config->animation_curve[0] = 0.42f;
+			config->animation_curve[1] = 0.0f;
+			config->animation_curve[2] = 0.58f;
+			config->animation_curve[3] = 1.0f;
+		}
+	}
+
+	return;
+}
 
 
   if (strcmp(directive, "border_color_active") == 0) {
