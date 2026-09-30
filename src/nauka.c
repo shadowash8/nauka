@@ -1,4 +1,5 @@
 #include "nauka.h"
+#include "animation.h"
 #include <assert.h>
 #include <getopt.h>
 #include <scenefx/render/fx_renderer/fx_renderer.h>
@@ -81,6 +82,7 @@ int main(int argc, char *argv[]) {
    * clients from the Unix socket, managing Wayland globals, and so on. */
   server.wl_display = wl_display_create();
   struct wl_event_loop *loop = wl_display_get_event_loop(server.wl_display);
+  animation_init(&server);
   struct wl_event_source *sigchld_source =
       wl_event_loop_add_signal(loop, SIGCHLD, handle_sigchld, &server);
   /* The backend is a wlroots feature which abstracts the underlying input and

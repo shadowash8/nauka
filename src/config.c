@@ -1,6 +1,7 @@
 #include "config.h"
 #include "layout.h"
 
+#include <ctype.h>
 #include <libgen.h>
 #include <limits.h>
 #include <linux/input-event-codes.h>
@@ -273,6 +274,40 @@ static void config_parse_line(struct nauka_config *config, char *line,
     }
     return;
   }
+
+  if (strcmp(directive, "animation_duration") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+	  char *end;
+      config->animation_duration = (unsigned int)strtoul(value, &end, 10); 
+    if (end == value)
+		  config->animation_duration = 0;
+    }
+    return;
+  }
+
+if (strcmp(directive, "animation_curve") == 0) {
+	char *value = skip_ws(cursor);
+
+	if (*value != '\0') {
+		float a, b, c, d;
+
+		if (sscanf(value, "%f , %f , %f , %f", &a, &b, &c, &d) == 4) {
+			config->animation_curve[0] = a;
+			config->animation_curve[1] = b;
+			config->animation_curve[2] = c;
+			config->animation_curve[3] = d;
+		} else {
+			config->animation_curve[0] = 0.42f;
+			config->animation_curve[1] = 0.0f;
+			config->animation_curve[2] = 0.58f;
+			config->animation_curve[3] = 1.0f;
+		}
+	}
+
+	return;
+}
+
 
   if (strcmp(directive, "border_color_active") == 0) {
     char *value = next_token(&cursor);
