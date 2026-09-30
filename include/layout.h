@@ -1,3 +1,6 @@
+#ifndef NAUKA_LAYOUT_H
+#define NAUKA_LAYOUT_H
+
 struct nauka_server;
 
 enum nauka_layout_mode {
@@ -10,3 +13,5 @@ enum nauka_layout_mode {
 void arrange_windows(struct nauka_server *server);
 void layout_set(struct nauka_server *server, enum nauka_layout_mode mode);
 void layout_cycle(struct nauka_server *server);
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef NAUKA_TOPLEVEL_H
+#define NAUKA_TOPLEVEL_H
+
 #include <wayland-server-core.h>
 #include <wlr/util/box.h>
 
@@ -64,3 +67,5 @@ void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen);
 void toplevel_toggle_sticky(struct nauka_toplevel *toplevel);
 
 void toplevel_swap(struct nauka_toplevel *a, struct nauka_toplevel *b);
+
+#endif

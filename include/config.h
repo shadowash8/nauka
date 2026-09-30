@@ -1,3 +1,6 @@
+#ifndef NAUKA_CONFIG_H
+#define NAUKA_CONFIG_H
+
 #include "layout.h"
 #include <stdint.h>
 #include <xkbcommon/xkbcommon.h>
@@ -74,3 +77,5 @@ void config_run_autostart(struct nauka_config *config);
 void config_load(struct nauka_config *config);
 void config_reload(struct nauka_config *config);
 void config_destroy(struct nauka_config *config);
+
+#endif
