@@ -44,13 +44,14 @@ static void config_set_defaults(struct nauka_config *config) {
   config->xwayland = false;
 
   config->master_factor = 0.55;
-  config->default_layout = NAUKA_LAYOUT_GRID;
+  config->default_layout = NAUKA_LAYOUT_SCROLLER;
   config->new_window_at_bottom = false;
 
   strcpy(config->cursor_theme, "Adwaita");
   config->cursor_size = 24;
   strcpy(config->keyboard_layout, "us");
   config->keyboard_variant[0] = '\0';
+  config->keyboard_options[0] = '\0';
 }
 
 /* Parses "#rrggbb" or "#rrggbbaa" into a float[4] rgba. Returns false on
@@ -433,6 +434,14 @@ if (strcmp(directive, "animation_curve") == 0) {
     char *value = next_token(&cursor);
     if (value != NULL)
       snprintf(config->keyboard_variant, sizeof(config->keyboard_variant), "%s",
+               value);
+    return;
+  }
+
+  if (strcmp(directive, "keyboard_options") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      snprintf(config->keyboard_options, sizeof(config->keyboard_options), "%s",
                value);
     return;
   }
