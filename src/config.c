@@ -41,6 +41,17 @@ static void config_set_defaults(struct nauka_config *config) {
   config->blur_strength = 3.0f;
   config->blur_alpha = 1.0f;
 
+  config->shadow = false;
+  config->shadow_floating_only = true;
+  config->shadow_blur = 30;
+  config->shadow_spread = 5;
+  config->shadow_offset_x = 0;
+  config->shadow_offset_y = 5;
+  config->shadow_color[0] = 0;
+  config->shadow_color[1] = 0;
+  config->shadow_color[2] = 0;
+  config->shadow_color[3] = 0.47f;
+
   config->xwayland = false;
 
   config->master_factor = 0.55;
@@ -385,6 +396,59 @@ if (strcmp(directive, "animation_curve") == 0) {
     char *value = next_token(&cursor);
     if (value != NULL)
       config->blur_alpha = atof(value);
+    return;
+  }
+
+  if (strcmp(directive, "shadow") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      config->shadow = strcasecmp(value, "true") == 0 ||
+                     strcasecmp(value, "1") == 0 ||
+                     strcasecmp(value, "yes") == 0;
+    }
+    return;
+  }
+
+  if (strcmp(directive, "shadow_blur") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->shadow_blur = atoi(value);
+    return;
+  }
+
+  if (strcmp(directive, "shadow_spread") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->shadow_spread = atoi(value);
+    return;
+  }
+
+  if (strcmp(directive, "shadow_floating_only") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->shadow_floating_only = atoi(value);
+    return;
+  }
+
+  if (strcmp(directive, "shadow_offset_x") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->shadow_offset_x = atoi(value);
+    return;
+  }
+
+  if (strcmp(directive, "shadow_offset_y") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->shadow_offset_y = atoi(value);
+    return;
+  }
+
+  if (strcmp(directive, "shadow_color") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL) {
+      parse_hex_color(value, config->shadow_color);
+    }
     return;
   }
 
