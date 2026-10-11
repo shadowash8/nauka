@@ -31,6 +31,7 @@ struct nauka_toplevel {
   double width_weight;
   struct wlr_scene_blur *blur;
   struct wlr_scene_rect *border;
+  struct wlr_scene_shadow *shadow;
   struct wlr_box floating_geometry;
 
   struct wlr_box anim_from, anim_to;
