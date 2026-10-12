@@ -27,7 +27,20 @@ nauka is a small and minimal Wayland compositor with all the eye candy one needs
 
 > * compile-time dependencies
 
-** building
+** installation
+
+*** aur
+latest version
+#+begin_src bash
+  yay -S nauka
+#+end_src
+
+git main version
+#+begin_src bash
+  yay -S nauka-git
+#+end_src
+
+*** building
 
 #+begin_src bash
 git clone https://github.com/shadowash8/nauka
