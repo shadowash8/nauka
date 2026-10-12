@@ -59,6 +59,14 @@ struct nauka_config {
   float blur_strength;
   float blur_alpha;
 
+  bool shadow;
+  bool shadow_floating_only;
+  int shadow_blur;
+  int shadow_spread;
+  int shadow_offset_x;
+  int shadow_offset_y;
+  float shadow_color[4];
+
   unsigned int animation_duration;
   float animation_curve[4];
 

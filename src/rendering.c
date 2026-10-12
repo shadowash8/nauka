@@ -111,6 +111,48 @@ void toplevel_update_borders(struct nauka_toplevel *toplevel) {
   /* round the client's own content to match, so it doesn't poke out past
    * the rounded corners of the border */
   toplevel_apply_content_radii(toplevel, w, h, inner_r);
+
+  bool use_shadow =
+      config->shadow && (!config->shadow_floating_only || toplevel->floating);
+
+  if (toplevel->shadow == NULL && use_shadow) {
+    toplevel->shadow =
+        wlr_scene_shadow_create(toplevel->border_tree, 1, 1, r,
+                                config->shadow_blur, config->shadow_color);
+    wlr_scene_node_lower_to_bottom(&toplevel->shadow->node);
+  }
+  if (toplevel->shadow == NULL)
+    return;
+
+  wlr_scene_node_set_enabled(&toplevel->shadow->node, use_shadow);
+  if (!use_shadow)
+    return;
+
+  int sb = config->shadow_blur;
+  int sp = config->shadow_spread;
+  int ox = config->shadow_offset_x;
+  int oy = config->shadow_offset_y;
+
+  int pad = sp + sb;
+  if (pad < 0)
+    pad = 0;
+  int sr = r + sp;
+  if (sr < 0)
+    sr = 0;
+
+  wlr_scene_node_set_position(&toplevel->shadow->node, -bw - pad + ox,
+                              -bw - pad + oy);
+  wlr_scene_shadow_set_size(toplevel->shadow, w + 2 * bw + 2 * pad,
+                            h + 2 * bw + 2 * pad);
+  wlr_scene_shadow_set_corner_radius(toplevel->shadow, sr);
+  wlr_scene_shadow_set_blur_sigma(toplevel->shadow, sb / 2.0f);
+  wlr_scene_shadow_set_color(toplevel->shadow, config->shadow_color);
+
+  struct clipped_region shadow_clip = {
+      .area = {pad - ox, pad - oy, w + 2 * bw, h + 2 * bw},
+      .corners = outer_radii,
+  };
+  wlr_scene_shadow_set_clipped_region(toplevel->shadow, shadow_clip);
 }
 
 void toplevel_set_border_color(struct nauka_toplevel *toplevel, bool active) {
