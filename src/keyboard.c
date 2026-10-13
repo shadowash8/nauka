@@ -42,10 +42,14 @@ void seat_focus_surface(struct nauka_server *server,
 }
 
 void focus_toplevel(struct nauka_toplevel *toplevel) {
-  if (toplevel == NULL) {
+  if (toplevel == NULL) return;
+  struct nauka_server *server = toplevel->server;
+  if (server->focused_toplevel == toplevel &&
+    toplevel->xdg_toplevel->current.activated &&
+    server->seat->keyboard_state.focused_surface ==
+        toplevel->xdg_toplevel->base->surface) {
     return;
   }
-  struct nauka_server *server = toplevel->server;
 
   struct nauka_toplevel *it;
   wl_list_for_each(it, &server->toplevels, link) {
