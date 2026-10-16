@@ -1,0 +1,12 @@
+# /usr/lib/systemd/user/umbriel.service
+[Unit]
+Description=Nauka Wayland compositor
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target
+PartOf=umbriel-session.target
+Before=umbriel-session.target
+
+[Service]
+Type=simple
+Slice=session.slice
+ExecStart=/usr/bin/nauka
