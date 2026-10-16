@@ -3,8 +3,8 @@
 Description=Nauka Wayland compositor
 Wants=graphical-session-pre.target
 After=graphical-session-pre.target
-PartOf=umbriel-session.target
-Before=umbriel-session.target
+PartOf=nauka-session.target
+Before=nauka-session.target
 
 [Service]
 Type=simple
