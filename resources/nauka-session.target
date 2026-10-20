@@ -1,7 +1,8 @@
-# /usr/lib/systemd/user/umbriel-session.target
+# /usr/lib/systemd/user/nauka-session.target
 [Unit]
 Description=Nauka compositor session
 Documentation=man:systemd.special(7)
+Requires=graphical-session.target
 BindsTo=graphical-session.target
 Wants=graphical-session.target
 After=graphical-session-pre.target

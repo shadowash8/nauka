@@ -1,4 +1,4 @@
-# /usr/lib/systemd/user/umbriel-shutdown.target
+# /usr/lib/systemd/user/nauka-shutdown.target
 [Unit]
 Description=Shutdown running nauka session
 DefaultDependencies=no
