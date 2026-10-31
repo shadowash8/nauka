@@ -93,12 +93,37 @@ static void layer_surface_handle_unmap(struct wl_listener *listener,
   struct wlr_seat *seat = server->seat;
 
   if (seat->keyboard_state.focused_surface == layer_surface->surface) {
-    wlr_seat_keyboard_clear_focus(seat);
+    struct nauka_toplevel *fallback = NULL;
 
-    if (!wl_list_empty(&server->toplevels)) {
-      struct nauka_toplevel *top =
-          wl_container_of(server->toplevels.next, top, link);
-      focus_toplevel(top);
+    /* Restore the window that had focus before the layer grabbed it.
+     * focus_toplevel leaves server->focused_toplevel pointing at it
+     * when a keyboard-interactive layer maps on top. */
+    if (server->focused_toplevel != NULL &&
+        (server->focused_toplevel->tag == server->current_tag ||
+         server->focused_toplevel->sticky)) {
+      fallback = server->focused_toplevel;
+    }
+
+    if (fallback == NULL && server->prev_focused != NULL &&
+        (server->prev_focused->tag == server->current_tag ||
+         server->prev_focused->sticky)) {
+      fallback = server->prev_focused;
+    }
+
+    if (fallback == NULL) {
+      struct nauka_toplevel *it;
+      wl_list_for_each(it, &server->toplevels, link) {
+        if (it->tag == server->current_tag || it->sticky) {
+          fallback = it;
+          break;
+        }
+      }
+    }
+
+    if (fallback != NULL) {
+      focus_toplevel(fallback);
+    } else {
+      wlr_seat_keyboard_clear_focus(seat);
     }
   }
 
