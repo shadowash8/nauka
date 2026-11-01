@@ -28,6 +28,12 @@ struct nauka_toplevel {
   bool floating;
   int corner_radius;
   float opacity;
+  /* per-window overrides from window rules; negative means "use the
+   * global config value" */
+  float opacity_active_override;
+  float opacity_inactive_override;
+  int radius_override;
+  bool geometry_from_rule;
   double width_weight;
   struct wlr_scene_blur *blur;
   struct wlr_scene_rect *border;

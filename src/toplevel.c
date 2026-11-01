@@ -1,5 +1,6 @@
 #include "animation.h"
 #include "nauka.h"
+#include "rules.h"
 #include <assert.h>
 #include <stdlib.h>
 
@@ -12,32 +13,38 @@
 static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
   struct nauka_toplevel *toplevel = wl_container_of(listener, toplevel, map);
+  struct nauka_server *server = toplevel->server;
 
-  /* Set toplevel tag to current focused tag */
-  toplevel->tag = toplevel->server->current_tag;
-  workspace_update_hidden(toplevel->server, toplevel->tag);
+  /* New windows land on the current tag by default; window rules may
+   * override this below. */
+  toplevel->tag = server->current_tag;
 
   struct wlr_box box = {0};
   struct wlr_output *output = wlr_output_layout_output_at(
-      toplevel->server->output_layout, toplevel->server->cursor->x,
-      toplevel->server->cursor->y);
+      server->output_layout, server->cursor->x, server->cursor->y);
   if (output != NULL) {
-    wlr_output_layout_get_box(toplevel->server->output_layout, output, &box);
+    wlr_output_layout_get_box(server->output_layout, output, &box);
   }
+
+  /* Apply matching window rules (float/tile/sticky/size/tag/opacity/
+   * radius/fullscreen), in config order so later rules override. */
+  rules_apply(toplevel, &box);
 
   if (toplevel->floating) {
     wlr_scene_node_reparent(&toplevel->scene_tree->node,
-                            toplevel->server->floating_tree);
+                            server->floating_tree);
 
-    int width = box.width / 2;
-    int height = box.height / 2;
+    if (!toplevel->geometry_from_rule) {
+      int width = box.width / 2;
+      int height = box.height / 2;
 
-    toplevel->floating_geometry = (struct wlr_box){
-        .x = box.x + (box.width - width) / 2,
-        .y = box.y + (box.height - height) / 2,
-        .width = width,
-        .height = height,
-    };
+      toplevel->floating_geometry = (struct wlr_box){
+          .x = box.x + (box.width - width) / 2,
+          .y = box.y + (box.height - height) / 2,
+          .width = width,
+          .height = height,
+      };
+    }
 
     animation_start(toplevel, toplevel->floating_geometry.x,
                               toplevel->floating_geometry.y);
@@ -45,32 +52,43 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
     /* actually request this size from the client — without this, only
      * the scene node moves, and the surface keeps whatever size it
      * initially committed */
-    wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, width, height);
-
-    if (toplevel->server->config.new_window_at_bottom)
-      wl_list_insert(toplevel->server->toplevels.prev,
-                     &toplevel->link); /* tail */
-    else
-      wl_list_insert(&toplevel->server->toplevels, &toplevel->link); /* head */
-    toplevel_update_borders(toplevel);
-    toplevel_update_blur(toplevel);
-    toplevel_update_opacity(toplevel,
-                            toplevel == toplevel->server->focused_toplevel);
-    focus_toplevel(toplevel);
-    return;
+    wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel,
+                              toplevel->floating_geometry.width,
+                              toplevel->floating_geometry.height);
   }
 
-  if (toplevel->server->config.new_window_at_bottom)
-    wl_list_insert(toplevel->server->toplevels.prev,
+  if (server->config.new_window_at_bottom)
+    wl_list_insert(server->toplevels.prev,
                    &toplevel->link); /* tail */
   else
-    wl_list_insert(&toplevel->server->toplevels, &toplevel->link); /* head */
+    wl_list_insert(&server->toplevels, &toplevel->link); /* head */
   toplevel_update_borders(toplevel);
   toplevel_update_blur(toplevel);
   toplevel_update_opacity(toplevel,
-                          toplevel == toplevel->server->focused_toplevel);
-  focus_toplevel(toplevel);
-  arrange_windows(toplevel->server);
+                          toplevel == server->focused_toplevel);
+
+  /* a window rule may have put this window on another tag -- it
+   * shouldn't steal focus then */
+  if (toplevel_is_visible(toplevel))
+    focus_toplevel(toplevel);
+
+  if (!toplevel->floating)
+    arrange_windows(server);
+
+  workspace_update_hidden(server, toplevel->tag);
+  update_toplevel_visibility(server);
+
+  if (toplevel->is_fullscreen) {
+    /* place the node first, so toplevel_set_fullscreen() saves the
+     * intended floating geometry rather than the pre-animation origin */
+    if (toplevel->floating) {
+      toplevel->animating = false;
+      wlr_scene_node_set_position(&toplevel->scene_tree->node,
+                                  toplevel->floating_geometry.x,
+                                  toplevel->floating_geometry.y);
+    }
+    toplevel_set_fullscreen(toplevel, true);
+  }
 }
 
 static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
@@ -305,6 +323,9 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
    * Initial color doesn't matter because focus will set it later.
    */
   toplevel->corner_radius = server->config.border_radius;
+  toplevel->opacity_active_override = -1.0f;
+  toplevel->opacity_inactive_override = -1.0f;
+  toplevel->radius_override = -1;
   toplevel->border_tree = wlr_scene_tree_create(toplevel->scene_tree);
   wlr_scene_node_raise_to_top(&toplevel->border_tree->node);
   toplevel->width_weight = 0.80;
@@ -516,7 +537,9 @@ void toplevel_toggle_fullscreen(struct nauka_toplevel *toplevel) {
 void toplevel_apply_config(struct nauka_server *server) {
   struct nauka_toplevel *toplevel;
   wl_list_for_each(toplevel, &server->toplevels, link) {
-    toplevel->corner_radius = server->config.border_radius;
+    if (toplevel->radius_override < 0) {
+      toplevel->corner_radius = server->config.border_radius;
+    }
     toplevel_update_borders(toplevel);
     toplevel_update_opacity(toplevel,
                             toplevel == toplevel->server->focused_toplevel);

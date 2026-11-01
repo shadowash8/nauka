@@ -244,8 +244,11 @@ static void iter_buffer_apply_effects(struct wlr_scene_buffer *buffer, int lx,
 
 void toplevel_update_opacity(struct nauka_toplevel *toplevel, bool active) {
   struct nauka_config *config = &toplevel->server->config;
-  toplevel->opacity =
-      active ? config->opacity_active : config->opacity_inactive;
+  float global = active ? config->opacity_active : config->opacity_inactive;
+  float override =
+      active ? toplevel->opacity_active_override
+             : toplevel->opacity_inactive_override;
+  toplevel->opacity = override >= 0.0f ? override : global;
   wlr_scene_node_for_each_buffer(&toplevel->scene_tree->node,
                                  iter_buffer_apply_effects, toplevel);
 }

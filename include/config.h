@@ -2,6 +2,7 @@
 #define NAUKA_CONFIG_H
 
 #include "layout.h"
+#include <regex.h>
 #include <stdint.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -39,6 +40,31 @@ struct nauka_autostart {
   struct nauka_autostart *next;
 };
 
+enum nauka_rule_predicate {
+  NAUKA_RULE_FLOAT,
+  NAUKA_RULE_TILE,
+  NAUKA_RULE_SIZE,
+  NAUKA_RULE_STICKY,
+  NAUKA_RULE_FULLSCREEN,
+  NAUKA_RULE_TAG,
+  NAUKA_RULE_OPACITY,
+  NAUKA_RULE_RADIUS,
+};
+
+struct nauka_window_rule {
+  struct nauka_window_rule *next;
+  regex_t app_id_re;
+  regex_t title_re;
+  bool match_app_id;
+  bool match_title;
+  enum nauka_rule_predicate predicate;
+  int size_w, size_h;
+  bool size_w_pct, size_h_pct;
+  int tag;
+  float opacity_active, opacity_inactive;
+  int radius;
+};
+
 struct nauka_config {
   uint32_t mod;
   uint32_t move_button;
@@ -71,6 +97,7 @@ struct nauka_config {
   float animation_curve[4];
 
   struct nauka_autostart *autostart;
+  struct nauka_window_rule *window_rules;
   bool xwayland;
 
   char cursor_theme[256];

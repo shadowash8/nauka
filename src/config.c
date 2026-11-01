@@ -1,7 +1,7 @@
 #include "config.h"
 #include "layout.h"
+#include "tags.h"
 
-#include <ctype.h>
 #include <libgen.h>
 #include <limits.h>
 #include <linux/input-event-codes.h>
@@ -12,12 +12,15 @@
 #include <strings.h>
 #include <unistd.h>
 #include <wlr/types/wlr_keyboard.h>
+#include <wlr/util/log.h>
 
 static void config_set_defaults(struct nauka_config *config) {
   config->mod = WLR_MODIFIER_LOGO;
   config->move_button = BTN_LEFT;
   config->resize_button = BTN_RIGHT;
   config->keybinds = NULL;
+  config->autostart = NULL;
+  config->window_rules = NULL;
   config->focus_follows_mouse = false;
 
   config->border_width = 2;
@@ -181,6 +184,42 @@ static uint32_t parse_pointer_button(const char *value) {
   return 0;
 }
 
+/* Parses "1024" or "80%" into a value plus a percent flag. */
+static bool parse_size_token(const char *token, int *value, bool *pct) {
+  char buf[32];
+  size_t len = strlen(token);
+  bool is_pct = len > 0 && token[len - 1] == '%';
+
+  if (is_pct) {
+    if (len - 1 >= sizeof(buf))
+      return false;
+    memcpy(buf, token, len - 1);
+    buf[len - 1] = '\0';
+  } else {
+    snprintf(buf, sizeof(buf), "%s", token);
+  }
+
+  char *end;
+  int v = (int)strtol(buf, &end, 10);
+  if (end == buf || v <= 0)
+    return false;
+
+  *value = v;
+  *pct = is_pct;
+  return true;
+}
+
+static bool compile_rule_pattern(const char *pattern, regex_t *re) {
+  int err = regcomp(re, pattern, REG_EXTENDED | REG_NOSUB);
+  if (err != 0) {
+    char buf[256];
+    regerror(err, re, buf, sizeof(buf));
+    wlr_log(WLR_ERROR, "window_rule: invalid regex '%s': %s", pattern, buf);
+    return false;
+  }
+  return true;
+}
+
 static void config_get_path(char *buf, size_t len) {
   const char *xdg_config = getenv("XDG_CONFIG_HOME");
   const char *home = getenv("HOME");
@@ -290,36 +329,35 @@ static void config_parse_line(struct nauka_config *config, char *line,
   if (strcmp(directive, "animation_duration") == 0) {
     char *value = next_token(&cursor);
     if (value != NULL) {
-	  char *end;
-      config->animation_duration = (unsigned int)strtoul(value, &end, 10); 
-    if (end == value)
-		  config->animation_duration = 0;
+      char *end;
+      config->animation_duration = (unsigned int)strtoul(value, &end, 10);
+      if (end == value)
+        config->animation_duration = 0;
     }
     return;
   }
 
-if (strcmp(directive, "animation_curve") == 0) {
-	char *value = skip_ws(cursor);
+  if (strcmp(directive, "animation_curve") == 0) {
+    char *value = skip_ws(cursor);
 
-	if (*value != '\0') {
-		float a, b, c, d;
+    if (*value != '\0') {
+      float a, b, c, d;
 
-		if (sscanf(value, "%f , %f , %f , %f", &a, &b, &c, &d) == 4) {
-			config->animation_curve[0] = a;
-			config->animation_curve[1] = b;
-			config->animation_curve[2] = c;
-			config->animation_curve[3] = d;
-		} else {
-			config->animation_curve[0] = 0.42f;
-			config->animation_curve[1] = 0.0f;
-			config->animation_curve[2] = 0.58f;
-			config->animation_curve[3] = 1.0f;
-		}
-	}
+      if (sscanf(value, "%f , %f , %f , %f", &a, &b, &c, &d) == 4) {
+        config->animation_curve[0] = a;
+        config->animation_curve[1] = b;
+        config->animation_curve[2] = c;
+        config->animation_curve[3] = d;
+      } else {
+        config->animation_curve[0] = 0.42f;
+        config->animation_curve[1] = 0.0f;
+        config->animation_curve[2] = 0.58f;
+        config->animation_curve[3] = 1.0f;
+      }
+    }
 
-	return;
-}
-
+    return;
+  }
 
   if (strcmp(directive, "border_color_active") == 0) {
     char *value = next_token(&cursor);
@@ -403,8 +441,8 @@ if (strcmp(directive, "animation_curve") == 0) {
     char *value = next_token(&cursor);
     if (value != NULL) {
       config->shadow = strcasecmp(value, "true") == 0 ||
-                     strcasecmp(value, "1") == 0 ||
-                     strcasecmp(value, "yes") == 0;
+                       strcasecmp(value, "1") == 0 ||
+                       strcasecmp(value, "yes") == 0;
     }
     return;
   }
@@ -539,6 +577,107 @@ if (strcmp(directive, "animation_curve") == 0) {
       else if (strcasecmp(value, "top") == 0)
         config->new_window_at_bottom = false;
     }
+    return;
+  }
+
+  if (strcmp(directive, "window_rule") == 0) {
+    char *app_id_pat = next_token(&cursor);
+    char *title_pat = next_token(&cursor);
+    char *pred_str = next_token(&cursor);
+    if (app_id_pat == NULL || title_pat == NULL || pred_str == NULL) {
+      return;
+    }
+
+    struct nauka_window_rule *rule = calloc(1, sizeof(*rule));
+    rule->match_app_id = strcmp(app_id_pat, "_") != 0;
+    rule->match_title = strcmp(title_pat, "_") != 0;
+
+    if (rule->match_app_id &&
+        !compile_rule_pattern(app_id_pat, &rule->app_id_re)) {
+      free(rule);
+      return;
+    }
+    if (rule->match_title &&
+        !compile_rule_pattern(title_pat, &rule->title_re)) {
+      if (rule->match_app_id)
+        regfree(&rule->app_id_re);
+      free(rule);
+      return;
+    }
+
+    bool ok = true;
+    if (strcasecmp(pred_str, "float") == 0) {
+      rule->predicate = NAUKA_RULE_FLOAT;
+    } else if (strcasecmp(pred_str, "tile") == 0) {
+      rule->predicate = NAUKA_RULE_TILE;
+    } else if (strcasecmp(pred_str, "sticky") == 0) {
+      rule->predicate = NAUKA_RULE_STICKY;
+    } else if (strcasecmp(pred_str, "fullscreen") == 0) {
+      rule->predicate = NAUKA_RULE_FULLSCREEN;
+    } else if (strcasecmp(pred_str, "size") == 0) {
+      char *w_str = next_token(&cursor);
+      char *h_str = next_token(&cursor);
+      if (w_str == NULL || h_str == NULL ||
+          !parse_size_token(w_str, &rule->size_w, &rule->size_w_pct) ||
+          !parse_size_token(h_str, &rule->size_h, &rule->size_h_pct)) {
+        wlr_log(WLR_ERROR,
+                "window_rule: size needs <width> <height> (px or %%): %s %s",
+                w_str ? w_str : "(null)", h_str ? h_str : "(null)");
+        ok = false;
+      } else {
+        rule->predicate = NAUKA_RULE_SIZE;
+      }
+    } else if (strcasecmp(pred_str, "tag") == 0) {
+      char *value = next_token(&cursor);
+      int tag = value != NULL ? atoi(value) : -1;
+      if (tag < 1 || tag > NAUKA_TAG_COUNT) {
+        wlr_log(WLR_ERROR, "window_rule: tag must be 1-%d", NAUKA_TAG_COUNT);
+        ok = false;
+      } else {
+        rule->predicate = NAUKA_RULE_TAG;
+        rule->tag = tag - 1; /* config uses 1-based labels, stores 0-based */
+      }
+    } else if (strcasecmp(pred_str, "opacity") == 0) {
+      char *active_str = next_token(&cursor);
+      char *inactive_str = next_token(&cursor);
+      if (active_str == NULL) {
+        wlr_log(WLR_ERROR, "window_rule: opacity needs <active> [<inactive>]");
+        ok = false;
+      } else {
+        rule->predicate = NAUKA_RULE_OPACITY;
+        rule->opacity_active = atof(active_str);
+        rule->opacity_inactive =
+            inactive_str != NULL ? atof(inactive_str) : rule->opacity_active;
+      }
+    } else if (strcasecmp(pred_str, "radius") == 0) {
+      char *value = next_token(&cursor);
+      if (value == NULL || atoi(value) < 0) {
+        wlr_log(WLR_ERROR, "window_rule: radius needs a value >= 0");
+        ok = false;
+      } else {
+        rule->predicate = NAUKA_RULE_RADIUS;
+        rule->radius = atoi(value);
+      }
+    } else {
+      wlr_log(WLR_ERROR, "window_rule: unknown predicate '%s'", pred_str);
+      ok = false;
+    }
+
+    if (!ok) {
+      if (rule->match_app_id)
+        regfree(&rule->app_id_re);
+      if (rule->match_title)
+        regfree(&rule->title_re);
+      free(rule);
+      return;
+    }
+
+    /* append at the tail: rules must apply in file order so that later
+     * matching rules override earlier ones */
+    struct nauka_window_rule **tail = &config->window_rules;
+    while (*tail != NULL)
+      tail = &(*tail)->next;
+    *tail = rule;
     return;
   }
 
@@ -739,4 +878,16 @@ void config_destroy(struct nauka_config *config) {
     a = next;
   }
   config->autostart = NULL;
+
+  struct nauka_window_rule *rule = config->window_rules;
+  while (rule) {
+    struct nauka_window_rule *next = rule->next;
+    if (rule->match_app_id)
+      regfree(&rule->app_id_re);
+    if (rule->match_title)
+      regfree(&rule->title_re);
+    free(rule);
+    rule = next;
+  }
+  config->window_rules = NULL;
 }

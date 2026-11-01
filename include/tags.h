@@ -1,3 +1,8 @@
+#ifndef NAUKA_TAGS_H
+#define NAUKA_TAGS_H
+
+#include <wayland-server-core.h>
+
 #define NAUKA_TAG_COUNT 9
 
 struct nauka_server;
@@ -8,3 +13,5 @@ void move_focused_to_tag(struct nauka_server *server, int tag);
 void workspace_manager_handle_commit(struct wl_listener *listener, void *data);
 void workspace_manager_handle_destroy(struct wl_listener *listener, void *data);
 void workspace_update_hidden(struct nauka_server *server, int tag);
+
+#endif /* NAUKA_TAGS_H */
