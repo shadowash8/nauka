@@ -1,5 +1,6 @@
 #include "config.h"
 #include "decoration.h"
+#include "idle.h"
 #include "keyboard.h"
 #include "layer_shell.h"
 #include "layout.h"
@@ -86,6 +87,10 @@ struct nauka_server {
   struct wl_listener request_start_drag;
   struct wl_listener start_drag;
   struct wl_listener drag_icon_destroy;
+  struct wlr_idle_notifier_v1 *idle_notifier;
+  struct wlr_idle_inhibit_manager_v1 *idle_inhibit_manager;
+  struct wl_listener new_idle_inhibitor;
+  int idle_inhibitor_count;
 
   struct nauka_toplevel *focused_toplevel;
   struct nauka_toplevel *prev_focused;

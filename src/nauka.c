@@ -20,6 +20,8 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
+#include <wlr/types/wlr_idle_inhibit_v1.h>
+#include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
@@ -237,6 +239,14 @@ int main(int argc, char *argv[]) {
   wl_signal_add(&server.session_lock_manager->events.new_lock,
                 &server.new_session_lock);
 
+  /* Setup idle manager */
+  server.idle_notifier = wlr_idle_notifier_v1_create(server.wl_display);
+
+  server.idle_inhibit_manager = wlr_idle_inhibit_v1_create(server.wl_display);
+  server.new_idle_inhibitor.notify = server_new_idle_inhibitor;
+  wl_signal_add(&server.idle_inhibit_manager->events.new_inhibitor,
+                &server.new_idle_inhibitor);
+
   /*
    * Creates a cursor, which is a wlroots utility for tracking the cursor
    * image shown on screen.
@@ -305,9 +315,6 @@ int main(int argc, char *argv[]) {
   server.pointer_focus_change.notify = seat_pointer_focus_change;
   wl_signal_add(&server.seat->pointer_state.events.focus_change,
                 &server.pointer_focus_change);
-  server.request_set_selection.notify = seat_request_set_selection;
-  wl_signal_add(&server.seat->events.request_set_selection,
-                &server.request_set_selection);
   server.request_set_selection.notify = seat_request_set_selection;
   wl_signal_add(&server.seat->events.request_set_selection,
                 &server.request_set_selection);
@@ -402,12 +409,13 @@ int main(int argc, char *argv[]) {
   wl_list_remove(&server.request_cursor.link);
   wl_list_remove(&server.new_pointer_constraint.link);
   wl_list_remove(&server.pointer_focus_change.link);
-  wl_list_remove(&server.request_set_selection.link);
   wl_list_remove(&server.request_start_drag.link);
   wl_list_remove(&server.start_drag.link);
   wl_list_remove(&server.cursor_pinch_begin.link);
   wl_list_remove(&server.cursor_pinch_update.link);
   wl_list_remove(&server.cursor_pinch_end.link);
+
+  wl_list_remove(&server.new_idle_inhibitor.link);
 
   wl_list_remove(&server.new_output.link);
   wl_list_remove(&server.output_manager_apply.link);

@@ -57,6 +57,7 @@ executable(
         'src/animation.c',
         'src/config.c',
         'src/decoration.c',
+        'src/idle.c',
         'src/keyboard.c',
         'src/layer_shell.c',
         'src/layout.c',
