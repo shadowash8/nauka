@@ -14,7 +14,7 @@
        in {
          default = pkgs.stdenv.mkDerivation {
            pname = "nauka";
-           version = "0.1.0";
+           version = "0.2.0";
 
            # Build the checkout the flake lives in, not a remote copy.
            src = self;
