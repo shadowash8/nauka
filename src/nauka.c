@@ -24,6 +24,8 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
+#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
@@ -230,6 +232,8 @@ int main(int argc, char *argv[]) {
   wlr_data_device_manager_create(server.wl_display);
   wlr_data_control_manager_v1_create(server.wl_display);
   wlr_screencopy_manager_v1_create(server.wl_display);
+  wlr_ext_image_copy_capture_manager_v1_create(server.wl_display, 1);
+  wlr_ext_output_image_capture_source_manager_v1_create(server.wl_display, 1);
   wlr_viewporter_create(server.wl_display);
   server.virtual_pointer_manager =
       wlr_virtual_pointer_manager_v1_create(server.wl_display);
