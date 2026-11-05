@@ -1,6 +1,7 @@
 #include "nauka.h"
 #include "animation.h"
 #include <assert.h>
+#include <bits/getopt_core.h>
 #include <getopt.h>
 #include <scenefx/render/fx_renderer/fx_renderer.h>
 #include <scenefx/types/wlr_scene.h>
@@ -62,20 +63,24 @@ static int handle_sigchld(int signal_number, void *data) {
 int main(int argc, char *argv[]) {
   wlr_log_init(WLR_DEBUG, NULL);
   char *startup_cmd = NULL;
+  char *config_path = NULL;
 
   int c;
-  while ((c = getopt(argc, argv, "s:h")) != -1) {
+  while ((c = getopt(argc, argv, "s:c:h")) != -1) {
     switch (c) {
     case 's':
       startup_cmd = optarg;
       break;
+    case 'c':
+      config_path = optarg;
+      break;
     default:
-      printf("Usage: %s [-s startup command]\n", argv[0]);
+      printf("Usage: %s [-s startup command] [-c config file]\n", argv[0]);
       return 0;
     }
   }
   if (optind < argc) {
-    printf("Usage: %s [-s startup command]\n", argv[0]);
+    printf("Usage: %s [-s startup command] [-c config file]\n", argv[0]);
     return 0;
   }
 
@@ -172,6 +177,9 @@ int main(int argc, char *argv[]) {
   wl_signal_add(&server.backend->events.new_output, &server.new_output);
 
   /* Load config before anything that uses config */
+  if (config_path != NULL) {
+    config_set_path(config_path);
+  }
   config_load(&server.config);
   server.current_layout = server.config.default_layout;
 

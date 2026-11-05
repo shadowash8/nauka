@@ -220,7 +220,21 @@ static bool compile_rule_pattern(const char *pattern, regex_t *re) {
   return true;
 }
 
+static char config_path_override[PATH_MAX] = "";
+
+void config_set_path(const char *path) {
+  if (realpath(path, config_path_override) == NULL) {
+    wlr_log(WLR_ERROR, "config file '%s' not found, using defaults", path);
+    config_path_override[0] = '\0';
+  }
+}
+
 static void config_get_path(char *buf, size_t len) {
+  if (config_path_override[0] != '\0') {
+    snprintf(buf, len, "%s", config_path_override);
+    return;
+  }
+
   const char *xdg_config = getenv("XDG_CONFIG_HOME");
   const char *home = getenv("HOME");
   if (xdg_config != NULL) {

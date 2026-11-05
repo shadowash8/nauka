@@ -113,6 +113,7 @@ struct nauka_config {
 
 void parse_file(struct nauka_config *config, const char *path);
 void config_run_autostart(struct nauka_config *config);
+void config_set_path(const char *path);
 void config_load(struct nauka_config *config);
 void config_reload(struct nauka_config *config);
 void config_destroy(struct nauka_config *config);
