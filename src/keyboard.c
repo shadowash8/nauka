@@ -42,12 +42,13 @@ void seat_focus_surface(struct nauka_server *server,
 }
 
 void focus_toplevel(struct nauka_toplevel *toplevel) {
-  if (toplevel == NULL) return;
+  if (toplevel == NULL)
+    return;
   struct nauka_server *server = toplevel->server;
   if (server->focused_toplevel == toplevel &&
-    toplevel->xdg_toplevel->current.activated &&
-    server->seat->keyboard_state.focused_surface ==
-        toplevel->xdg_toplevel->base->surface) {
+      toplevel->xdg_toplevel->current.activated &&
+      server->seat->keyboard_state.focused_surface ==
+          toplevel->xdg_toplevel->base->surface) {
     return;
   }
 
@@ -95,6 +96,7 @@ static void keyboard_handle_modifiers(struct wl_listener *listener,
    * pressed. We simply communicate this to the client. */
   struct nauka_keyboard *keyboard =
       wl_container_of(listener, keyboard, modifiers);
+  idle_notify_activity(keyboard->server);
   /*
    * A seat can only have one keyboard, but this is a limitation of the
    * Wayland protocol - not wlroots. We assign all connected keyboards to the
@@ -422,6 +424,8 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
   struct wlr_keyboard_key_event *event = data;
   struct wlr_seat *seat = server->seat;
 
+  idle_notify_activity(server);
+
   uint32_t keycode = event->keycode + 8;
 
   const xkb_keysym_t *live_syms;
@@ -488,8 +492,8 @@ void keyboard_apply_keymap(struct nauka_server *server,
       .variant = server->config.keyboard_variant[0]
                      ? server->config.keyboard_variant
                      : NULL,
-      .options = server->config.keyboard_options[0] 
-                     ? server->config.keyboard_options 
+      .options = server->config.keyboard_options[0]
+                     ? server->config.keyboard_options
                      : NULL,
   };
 

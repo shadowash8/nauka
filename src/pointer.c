@@ -374,6 +374,7 @@ void server_cursor_motion(struct wl_listener *listener, void *data) {
   struct nauka_server *server =
       wl_container_of(listener, server, cursor_motion);
   struct wlr_pointer_motion_event *event = data;
+  idle_notify_activity(server);
 
   /* Always deliver raw relative deltas to clients using the relative
    * pointer protocol — this is what gives Minecraft/GLFW smooth mouse-look
@@ -410,6 +411,7 @@ void server_cursor_motion_absolute(struct wl_listener *listener, void *data) {
   struct nauka_server *server =
       wl_container_of(listener, server, cursor_motion_absolute);
   struct wlr_pointer_motion_absolute_event *event = data;
+  idle_notify_activity(server);
   wlr_cursor_warp_absolute(server->cursor, &event->pointer->base, event->x,
                            event->y);
   process_cursor_motion(server, event->time_msec);
@@ -421,6 +423,7 @@ void server_cursor_button(struct wl_listener *listener, void *data) {
   struct nauka_server *server =
       wl_container_of(listener, server, cursor_button);
   struct wlr_pointer_button_event *event = data;
+  idle_notify_activity(server);
   if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
     /* If you released any buttons, we exit interactive move/resize mode. */
     wlr_seat_pointer_notify_button(server->seat, event->time_msec,
@@ -479,6 +482,7 @@ void server_cursor_axis(struct wl_listener *listener, void *data) {
    * for example when you move the scroll wheel. */
   struct nauka_server *server = wl_container_of(listener, server, cursor_axis);
   struct wlr_pointer_axis_event *event = data;
+  idle_notify_activity(server);
   /* Notify the client with pointer focus of the axis event. */
   wlr_seat_pointer_notify_axis(
       server->seat, event->time_msec, event->orientation, event->delta,

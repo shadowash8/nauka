@@ -1,3 +1,4 @@
+#include "idle.h"
 #include "toplevel.h"
 #include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_input_device.h>
