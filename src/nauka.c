@@ -104,34 +104,20 @@ static void notify_ready(void) {
   unsetenv("NOTIFY_SOCKET");
 }
 
-static void import_session_env(void) {
-  static char *vars[] = {"WAYLAND_DISPLAY", "DISPLAY", "XDG_CURRENT_DESKTOP",
-                         "XDG_SESSION_TYPE", NULL};
+#define SESSION_VARS                                                           \
+  "WAYLAND_DISPLAY", "DISPLAY", "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE"
 
+static void import_session_env(void) {
   if (getenv("INVOCATION_ID")) {
-    char *sd[] = {"systemctl", "--user", "import-environment",
-                  vars[0],     vars[1],  vars[2],
-                  vars[3],     NULL};
-    run_cmd(sd);
-    char *db[] = {"dbus-update-activation-environment",
-                  "--systemd",
-                  vars[0],
-                  vars[1],
-                  vars[2],
-                  vars[3],
-                  NULL};
-    run_cmd(db);
+    run_cmd((char *const[]){"systemctl", "--user", "import-environment",
+                            SESSION_VARS, NULL});
+    run_cmd((char *const[]){"dbus-update-activation-environment", "--systemd",
+                            SESSION_VARS, NULL});
   } else {
-    char *dn[] = {"dinitctl", "--quiet", "--user", "setenv", vars[0],
-                  vars[1],    vars[2],   vars[3],  NULL};
-    run_cmd(dn);
-    char *db[] = {"dbus-update-activation-environment",
-                  vars[0],
-                  vars[1],
-                  vars[2],
-                  vars[3],
-                  NULL};
-    run_cmd(db);
+    run_cmd((char *const[]){"dinitctl", "--quiet", "--user", "setenv",
+                            SESSION_VARS, NULL});
+    run_cmd((char *const[]){"dbus-update-activation-environment", SESSION_VARS,
+                            NULL});
   }
 }
 
