@@ -55,7 +55,7 @@ Supported systems are systemd and dinit:
 
 #+begin_src bash
   -Dinit=                # For no init files
-         systemd         # Systemd only
+         systemd         # Systemd only       [Default]
          dinit           # Dinit only
          systemd,dinit   # Systemd and dinit
 #+end_src
@@ -65,9 +65,9 @@ Supported systems are systemd and dinit:
 #+begin_src bash
 nauka [--session] [-s] [-c path]
 
--s for startup script
---session for automated dbus population
--c for specifying an alternative config file
+-s            for startup script
+--session     for automated dbus population
+-c,--config   for specifying an alternative config file
 #+end_src
 
 
