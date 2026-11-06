@@ -5,7 +5,7 @@
 if [ -n "${MANAGERPID:-}" ] && [ "${SYSTEMD_EXEC_PID:-}" = "$$" ]; then
     case "$(ps -p "$MANAGERPID" -o cmd=)" in
     *systemd*--user*)
-        exec nauka
+        exec nauka --session
         ;;
     esac
 fi
@@ -90,5 +90,6 @@ elif hash dinitctl >/dev/null 2>&1; then
     # Unset environment that we've set.
     dinitctl --quiet --user unsetenv WAYLAND_DISPLAY DISPLAY XDG_SESSION_TYPE XDG_CURRENT_DESKTOP 2>/dev/null
 else
-    echo "No systemd or dinit detected, please run nauka directly and initialize a DBus session."
+    echo "Systemd and dinit not detected, running nauka as an unmanaged session"
+    exec nauka --session
 fi

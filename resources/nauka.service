@@ -9,4 +9,4 @@ Before=nauka-session.target
 [Service]
 Type=notify
 Slice=session.slice
-ExecStart=/usr/bin/nauka --session
+ExecStart=@bindir@/nauka --session

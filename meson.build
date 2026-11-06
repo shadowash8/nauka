@@ -2,12 +2,18 @@ project(
     'nauka',
     'c',
     version: '0.2.0',
+    meson_version:  '>=1.1.0',
     default_options: [
         'warning_level=3',
     ],
 )
 
 cc = meson.get_compiler('c')
+
+prefix  = get_option('prefix')
+bindir  = prefix / get_option('bindir')
+datadir = get_option('datadir')
+init    = get_option('init')
 
 wayland_server = dependency('wayland-server')
 scenefx = dependency('scenefx-0.5')
@@ -81,6 +87,40 @@ executable(
     install: true,
 )
 
-install_data('default.conf', install_dir: get_option('datadir') / 'nauka')
-install_data('LICENSE', install_dir: get_option('datadir') / 'licenses/nauka')
-install_data('nauka.desktop', install_dir: get_option('datadir') / 'wayland-sessions')
+install_data('default.conf', install_dir: datadir / 'nauka')
+install_data('LICENSE',      install_dir: datadir / 'licenses/nauka')
+
+install_data('resources/start-nauka', install_dir: get_option('bindir'),
+             install_mode: 'rwxr-xr-x')
+install_data('resources/nauka.desktop',
+             install_dir: datadir / 'wayland-sessions')
+install_data('resources/nauka-portals.conf',
+             install_dir: datadir / 'xdg-desktop-portal')
+
+
+conf = configuration_data()
+conf.set('bindir', bindir)
+
+if 'systemd' in init
+  systemd_dir =  prefix / 'lib/systemd/user'
+
+  install_data(
+    configure_file(input: 'resources/nauka.service',
+                   output: 'nauka.service', configuration: conf),
+    'resources/nauka-session.target',
+    'resources/nauka-shutdown.target',
+    install_dir: systemd_dir,
+  )
+endif
+
+if 'dinit' in init
+  dinit_dir = prefix / 'lib/dinit.d/user'
+
+  install_data(
+    configure_file(input: 'resources/dinit/nauka',
+                   output: 'nauka.dinit', configuration: conf),
+    rename: 'nauka',
+    install_dir: dinit_dir,
+  )
+  install_data('resources/dinit/nauka.target', install_dir: dinit_dir)
+endif
