@@ -105,34 +105,33 @@ static void notify_ready(void) {
 }
 
 #define SESSION_VARS                                                           \
-  "WAYLAND_DISPLAY", "DISPLAY", "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE"
+  "WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE"
 
-static void import_session_env(void) {
-  static const char import_cmd[] =
-#if HAVE_SYSTEMD
-      "systemctl --user import-environment " SESSION_VARS_STR ";"
+static const char import_cmd[] =
+#if USE_SYSTEMD
+    "systemctl --user import-environment " SESSION_VARS ";"
 #endif
-#if HAVE_DINIT
-      "dinitctl setenv " SESSION_VARS_STR ";"
+#if USE_DINIT
+    "dinitctl setenv " SESSION_VARS ";"
 #endif
-      "hash dbus-update-activation-environment 2>/dev/null && \
+    "hash dbus-update-activation-environment 2>/dev/null && \
                  dbus-update-activation-environment";
 
-  run_cmd((char *const[]){"sh", "-c", (char *)import_cmd, SESSION_VARS, NULL});
+static void import_session_env(void) {
+  run_cmd((char *const[]){"sh", "-c", (char *)import_cmd, NULL});
 }
 
+static const char unimport_cmd[] =
+#if USE_SYSTEMD
+    "systemctl --user unset-environment " SESSION_VARS ";"
+#endif
+#if USE_DINIT
+    "dinitctl unsetenv " SESSION_VARS ";"
+#endif
+    ":";
 static void unimport_session_env(void) {
-  static const char unimport_cmd[] =
-#if HAVE_SYSTEMD
-      "systemctl --user unset-environment " SESSION_VARS_STR ";"
-#endif
-#if HAVE_DINIT
-      "dinitctl unsetenv " SESSION_VARS_STR ";"
-#endif
-      "";
 
-  run_cmd(
-      (char *const[]){"sh", "-c", (char *)unimport_cmd, SESSION_VARS, NULL});
+  run_cmd((char *const[]){"sh", "-c", (char *)unimport_cmd, NULL});
 }
 
 /* For brevity's sake, struct members are annotated where they are used. */
