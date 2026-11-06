@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
     int opt_idx = 0;
     static struct option long_options[] = {
         {"session", no_argument, 0, 1},
+        {"config", required_argument, 0, 'c'},
         {0, 0, 0, 0},
     };
     c = getopt_long(argc, argv, "s:c:h", long_options, &opt_idx);
@@ -151,13 +152,15 @@ int main(int argc, char *argv[]) {
       config_path = optarg;
       break;
     default:
-      printf("Usage: %s [--session] [-s startup command] [-c config file]\n",
+      printf("Usage: %s [--session] [-s startup command] [--config,-c config "
+             "file]\n",
              argv[0]);
       return 0;
     }
   }
   if (optind < argc) {
-    printf("Usage: %s [--session] [-s startup command] [-c config file]\n",
+    printf("Usage: %s [--session] [-s startup command] [--config,-c config "
+           "file]\n",
            argv[0]);
     return 0;
   }
