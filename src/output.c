@@ -1,14 +1,18 @@
 #include "nauka.h"
+#include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include <scenefx/types/wlr_scene.h>
+#include <wayland-server-protocol.h>
 #include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/util/log.h>
 
 void output_frame(struct wl_listener *listener, void *data) {
   (void)data;
@@ -117,7 +121,20 @@ static bool apply_output_config(struct wlr_output_configuration_v1 *config,
       continue;
     }
 
-    ok &= wlr_output_commit_state(wlr_output, &state);
+    if (!wlr_output_commit_state(wlr_output, &state)) {
+      /* config was rejected (bad scale/mode combo etc), retry with defaults
+       * so the output isn't left stale, but still report the failure. */
+      wlr_log(WLR_ERROR, "output %s: config rejected, using defaults",
+              wlr_output->name);
+      ok = false;
+      wlr_output_state_finish(&state);
+      wlr_output_state_init(&state);
+      wlr_output_state_set_enabled(&state, true);
+      struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
+      if (mode)
+        wlr_output_state_set_mode(&state, mode);
+      wlr_output_commit_state(wlr_output, &state);
+    }
     wlr_output_state_finish(&state);
 
     if (!ok) {
@@ -180,6 +197,62 @@ void output_manager_test(struct wl_listener *listener, void *data) {
   apply_output_config(config, server, true);
 }
 
+static const struct nauka_output_rule *
+find_output_rule(struct nauka_server *server, const char *name) {
+  const struct nauka_output_rule *match = NULL;
+  for (const struct nauka_output_rule *r = server->config.output_rules; r;
+       r = r->next) {
+    if (strcmp(r->name, "*") == 0 || strcmp(r->name, name) == 0)
+      match = r; /* last match wins */
+  }
+  return match;
+}
+
+static struct wlr_output_mode *find_mode(struct wlr_output *wlr_output,
+                                         const struct nauka_output_rule *rule) {
+  struct wlr_output_mode *best = NULL;
+  struct wlr_output_mode *mode;
+  wl_list_for_each(mode, &wlr_output->modes, link) {
+    if (mode->width != rule->width || mode->height != rule->height)
+      continue;
+    if (rule->refresh_mhz > 0) {
+      /* allow 0.5 Hz slack so "60" matches 59.94 */
+      if (abs(mode->refresh - rule->refresh_mhz) > 500)
+        continue;
+      if (best == NULL || abs(mode->refresh - rule->refresh_mhz) <
+                              abs(best->refresh - rule->refresh_mhz))
+        best = mode;
+    } else if (best == NULL || mode->refresh > best->refresh) {
+      best = mode;
+    }
+  }
+  return best;
+}
+
+static void output_fill_state(const struct nauka_output_rule *rule,
+                              struct wlr_output *wlr_output,
+                              struct wlr_output_state *state) {
+  struct wlr_output_mode *mode = NULL;
+  if (rule && rule->has_mode) {
+    mode = find_mode(wlr_output, rule);
+    if (!mode) {
+      wlr_log(WLR_ERROR, "output %s: mode %dx%d not supported, using preferred",
+              wlr_output->name, rule->width, rule->height);
+    }
+  }
+  if (!mode)
+    mode = wlr_output_preferred_mode(wlr_output);
+  if (mode)
+    wlr_output_state_set_mode(state, mode);
+
+  if (rule && rule->has_scale)
+    wlr_output_state_set_scale(state, rule->scale);
+  if (rule && rule->has_transform)
+    wlr_output_state_set_transform(state, rule->transform);
+  if (rule && rule->has_adaptive_sync)
+    wlr_output_state_set_adaptive_sync_enabled(state, rule->adaptive_sync);
+}
+
 void server_new_output(struct wl_listener *listener, void *data) {
   (void)data;
 
@@ -192,6 +265,11 @@ void server_new_output(struct wl_listener *listener, void *data) {
    * and our renderer. Must be done once, before committing the output */
   wlr_output_init_render(wlr_output, server->allocator, server->renderer);
 
+  /* Match the configured output rules before the first commit, so mode,
+   * scale and transform take effect immediately. */
+  const struct nauka_output_rule *rule =
+      find_output_rule(server, wlr_output->name);
+
   /* The output may be disabled, switch it on. */
   struct wlr_output_state state;
   wlr_output_state_init(&state);
@@ -199,17 +277,24 @@ void server_new_output(struct wl_listener *listener, void *data) {
 
   /* Some backends don't have modes. DRM+KMS does, and we need to set a mode
    * before we can use the output. The mode is a tuple of (width, height,
-   * refresh rate), and each monitor supports only a specific set of modes. We
-   * just pick the monitor's preferred mode, a more sophisticated compositor
-   * would let the user configure it. */
-  struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
-  if (mode != NULL) {
-    wlr_output_state_set_mode(&state, mode);
-  }
+   * refresh rate), and each monitor supports only a specific set of modes.
+   * output_fill_state() applies the rule's mode/scale/transform/adaptive
+   * sync, or falls back to the monitor's preferred mode and defaults when no
+   * rule matches. */
+  output_fill_state(rule, wlr_output, &state);
 
   /* Atomically applies the new output state. */
-  wlr_output_commit_state(wlr_output, &state);
+  if (!wlr_output_commit_state(wlr_output, &state)) {
+    wlr_log(WLR_ERROR, "output %s: failed to apply initial state",
+            wlr_output->name);
+  }
   wlr_output_state_finish(&state);
+
+  /* The xcursor theme has to be loaded for this output's scale, otherwise
+   * there is no cursor image at HiDPI scales. */
+  if (server->cursor_mgr != NULL) {
+    wlr_xcursor_manager_load(server->cursor_mgr, wlr_output->scale);
+  }
 
   /* Allocates and configures our state for this output */
   struct nauka_output *output = calloc(1, sizeof(*output));
@@ -242,7 +327,10 @@ void server_new_output(struct wl_listener *listener, void *data) {
    * output (such as DPI, scale factor, manufacturer, etc).
    */
   struct wlr_output_layout_output *l_output =
-      wlr_output_layout_add_auto(server->output_layout, wlr_output);
+      (rule && rule->has_pos)
+          ? wlr_output_layout_add(server->output_layout, wlr_output, rule->x,
+                                  rule->y)
+          : wlr_output_layout_add_auto(server->output_layout, wlr_output);
   struct wlr_scene_output *scene_output =
       wlr_scene_output_create(server->scene, wlr_output);
   wlr_scene_output_layout_add_output(server->scene_layout, l_output,
@@ -279,4 +367,35 @@ void gamma_control_set_gamma(struct wl_listener *listener, void *data) {
   }
 
   wlr_output_state_finish(&state);
+}
+
+void output_reload_config(struct nauka_server *server) {
+  struct nauka_output *output;
+  wl_list_for_each(output, &server->outputs, link) {
+    const struct nauka_output_rule *rule =
+        find_output_rule(server, output->wlr_output->name);
+    if (!rule)
+      continue;
+
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+    output_fill_state(rule, output->wlr_output, &state);
+    wlr_output_commit_state(output->wlr_output, &state);
+    wlr_output_state_finish(&state);
+
+    if (rule->has_pos)
+      wlr_output_layout_add(server->output_layout, output->wlr_output, rule->x,
+                            rule->y);
+
+    arrange_layers(output);
+    wlr_scene_optimized_blur_set_size(server->blur_layer,
+                                      output->wlr_output->width,
+                                      output->wlr_output->height);
+    session_lock_update_output(output);
+  }
+  wl_list_for_each(output, &server->outputs, link) {
+    wlr_xcursor_manager_load(server->cursor_mgr, output->wlr_output->scale);
+  }
+  update_output_manager_config(server);
+  arrange_windows(server);
 }

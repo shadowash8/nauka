@@ -141,6 +141,7 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
       case NAUKA_ACTION_RELOAD:
         config_reload(&server->config);
         pointer_reload_theme(server);
+        output_reload_config(server);
         struct nauka_keyboard *kbd;
         wl_list_for_each(kbd, &server->keyboards, link) {
           keyboard_apply_keymap(server, kbd->wlr_keyboard);

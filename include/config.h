@@ -4,6 +4,7 @@
 #include "layout.h"
 #include <regex.h>
 #include <stdint.h>
+#include <wayland-server-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
 enum nauka_keybind_action {
@@ -49,6 +50,22 @@ enum nauka_rule_predicate {
   NAUKA_RULE_TAG,
   NAUKA_RULE_OPACITY,
   NAUKA_RULE_RADIUS,
+};
+
+struct nauka_output_rule {
+  char name[64];
+  bool has_mode;
+  int width, height;
+  int refresh_mhz; /* 0 = highest available */
+  bool has_scale;
+  float scale;
+  bool has_pos;
+  int x, y;
+  bool has_transform;
+  enum wl_output_transform transform;
+  bool has_adaptive_sync;
+  bool adaptive_sync;
+  struct nauka_output_rule *next;
 };
 
 struct nauka_window_rule {
@@ -98,6 +115,7 @@ struct nauka_config {
 
   struct nauka_autostart *autostart;
   struct nauka_window_rule *window_rules;
+  struct nauka_output_rule *output_rules;
   bool xwayland;
 
   char cursor_theme[256];

@@ -55,6 +55,7 @@ static void config_set_defaults(struct nauka_config *config) {
   config->shadow_color[2] = 0;
   config->shadow_color[3] = 0.47f;
 
+  config->output_rules = NULL;
   config->xwayland = false;
 
   config->master_factor = 0.55;
@@ -66,6 +67,34 @@ static void config_set_defaults(struct nauka_config *config) {
   strcpy(config->keyboard_layout, "us");
   config->keyboard_variant[0] = '\0';
   config->keyboard_options[0] = '\0';
+}
+
+static bool parse_bool(const char *v) {
+  return strcasecmp(v, "true") == 0 || strcmp(v, "1") == 0 ||
+         strcasecmp(v, "yes") == 0;
+}
+
+static bool parse_transform(const char *v, enum wl_output_transform *out) {
+  static const struct {
+    const char *name;
+    enum wl_output_transform t;
+  } map[] = {
+      {"normal", WL_OUTPUT_TRANSFORM_NORMAL},
+      {"90", WL_OUTPUT_TRANSFORM_90},
+      {"180", WL_OUTPUT_TRANSFORM_180},
+      {"270", WL_OUTPUT_TRANSFORM_270},
+      {"flipped", WL_OUTPUT_TRANSFORM_FLIPPED},
+      {"flipped-90", WL_OUTPUT_TRANSFORM_FLIPPED_90},
+      {"flipped-180", WL_OUTPUT_TRANSFORM_FLIPPED_180},
+      {"flipped-270", WL_OUTPUT_TRANSFORM_FLIPPED_270},
+  };
+  for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
+    if (strcasecmp(v, map[i].name) == 0) {
+      *out = map[i].t;
+      return true;
+    }
+  }
+  return false;
 }
 
 /* Parses "#rrggbb" or "#rrggbbaa" into a float[4] rgba. Returns false on
@@ -594,6 +623,66 @@ static void config_parse_line(struct nauka_config *config, char *line,
     return;
   }
 
+  if (strcmp(directive, "output") == 0) {
+    char *name = next_token(&cursor);
+    if (name == NULL)
+      return;
+
+    struct nauka_output_rule *rule = calloc(1, sizeof(*rule));
+    snprintf(rule->name, sizeof(rule->name), "%s", name);
+
+    char *key;
+    while ((key = next_token(&cursor)) != NULL) {
+      char *value = next_token(&cursor);
+      if (value == NULL) {
+        wlr_log(WLR_ERROR, "output %s: '%s' needs a value", name, key);
+        break;
+      }
+
+      if (strcmp(key, "mode") == 0) {
+        int w, h;
+        float refresh = 0;
+        int n = sscanf(value, "%dx%d@%f", &w, &h, &refresh);
+        if (n >= 2 && w > 0 && h > 0) {
+          rule->has_mode = true;
+          rule->width = w;
+          rule->height = h;
+          rule->refresh_mhz = n == 3 ? (int)(refresh * 1000.0f + 0.5f) : 0;
+        } else {
+          wlr_log(WLR_ERROR, "output %s: bad mode '%s'", name, value);
+        }
+      } else if (strcmp(key, "scale") == 0) {
+        float s = atof(value);
+        if (s > 0) {
+          rule->has_scale = true;
+          rule->scale = s;
+        }
+      } else if (strcmp(key, "pos") == 0) {
+        if (sscanf(value, "%d,%d", &rule->x, &rule->y) == 2)
+          rule->has_pos = true;
+        else
+          wlr_log(WLR_ERROR, "output %s: bad pos '%s'", name, value);
+      } else if (strcmp(key, "transform") == 0) {
+        if (parse_transform(value, &rule->transform))
+          rule->has_transform = true;
+        else
+          wlr_log(WLR_ERROR, "output %s: bad transform '%s'", name, value);
+      } else if (strcmp(key, "adaptive_sync") == 0) {
+        rule->has_adaptive_sync = true;
+        rule->adaptive_sync = parse_bool(value);
+      } else {
+        wlr_log(WLR_ERROR, "output %s: unknown option '%s'", name, key);
+      }
+    }
+
+    /* append at tail so later rules override earlier ones */
+    struct nauka_output_rule **tail = &config->output_rules;
+    while (*tail != NULL)
+      tail = &(*tail)->next;
+    *tail = rule;
+    return;
+  }
+
   if (strcmp(directive, "window_rule") == 0) {
     char *app_id_pat = next_token(&cursor);
     char *title_pat = next_token(&cursor);
@@ -892,6 +981,14 @@ void config_destroy(struct nauka_config *config) {
     a = next;
   }
   config->autostart = NULL;
+
+  struct nauka_output_rule *o = config->output_rules;
+  while (o) {
+    struct nauka_output_rule *next = o->next;
+    free(o);
+    o = next;
+  }
+  config->output_rules = NULL;
 
   struct nauka_window_rule *rule = config->window_rules;
   while (rule) {
