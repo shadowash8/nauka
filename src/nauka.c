@@ -107,19 +107,32 @@ static void notify_ready(void) {
 #define SESSION_VARS                                                           \
   "WAYLAND_DISPLAY", "DISPLAY", "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE"
 
-static const char init_import_cmd[] =
+static void import_session_env(void) {
+  static const char import_cmd[] =
 #if HAVE_SYSTEMD
-    "systemctl --user import-environment " SESSION_VARS_STR ";"
+      "systemctl --user import-environment " SESSION_VARS_STR ";"
 #endif
 #if HAVE_DINIT
-    "dinitctl setenv " SESSION_VARS_STR ";"
+      "dinitctl setenv " SESSION_VARS_STR ";"
 #endif
-    "hash dbus-update-activation-environment 2>/dev/null && \
+      "hash dbus-update-activation-environment 2>/dev/null && \
                  dbus-update-activation-environment";
 
-static void import_session_env(void) {
+  run_cmd((char *const[]){"sh", "-c", (char *)import_cmd, SESSION_VARS, NULL});
+}
+
+static void unimport_session_env(void) {
+  static const char unimport_cmd[] =
+#if HAVE_SYSTEMD
+      "systemctl --user unset-environment " SESSION_VARS_STR ";"
+#endif
+#if HAVE_DINIT
+      "dinitctl unsetenv " SESSION_VARS_STR ";"
+#endif
+      "";
+
   run_cmd(
-      (char *const[]){"sh", "-c", (char *)init_import_cmd, SESSION_VARS, NULL});
+      (char *const[]){"sh", "-c", (char *)unimport_cmd, SESSION_VARS, NULL});
 }
 
 /* For brevity's sake, struct members are annotated where they are used. */
@@ -536,6 +549,9 @@ int main(int argc, char *argv[]) {
   wlr_renderer_destroy(server.renderer);
   wl_event_source_remove(sigchld_source);
   wl_display_destroy(server.wl_display);
+
+  if (session_mode)
+    unimport_session_env();
 
   return 0;
 }
