@@ -29,6 +29,9 @@ if hash systemctl >/dev/null 2>&1; then
       exit 1
     fi
 
+    # Unset leftover variables
+    systemctl --user unset-environment WAYLAND_DISPLAY DISPLAY XDG_SESSION_TYPE XDG_CURRENT_DESKTOP
+
     # Reset failed state of all user units.
     systemctl --user reset-failed
 
@@ -62,6 +65,9 @@ elif hash dinitctl >/dev/null 2>&1; then
       echo 'A nauka session is already running.'
       exit 1
     fi
+
+    # Unset leftover variables
+    dinitctl --quiet --user unsetenv WAYLAND_DISPLAY DISPLAY XDG_SESSION_TYPE XDG_CURRENT_DESKTOP 2>/dev/null
 
     # Import the login manager environment into dinit
     # Might not work correctly for multiline variable names, but

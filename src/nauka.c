@@ -107,18 +107,19 @@ static void notify_ready(void) {
 #define SESSION_VARS                                                           \
   "WAYLAND_DISPLAY", "DISPLAY", "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE"
 
+static const char init_import_cmd[] =
+#if HAVE_SYSTEMD
+    "systemctl --user import-environment " SESSION_VARS_STR ";"
+#endif
+#if HAVE_DINIT
+    "dinitctl setenv " SESSION_VARS_STR ";"
+#endif
+    "hash dbus-update-activation-environment 2>/dev/null && \
+                 dbus-update-activation-environment";
+
 static void import_session_env(void) {
-  if (getenv("INVOCATION_ID")) {
-    run_cmd((char *const[]){"systemctl", "--user", "import-environment",
-                            SESSION_VARS, NULL});
-    run_cmd((char *const[]){"dbus-update-activation-environment", "--systemd",
-                            SESSION_VARS, NULL});
-  } else {
-    run_cmd((char *const[]){"dinitctl", "--quiet", "--user", "setenv",
-                            SESSION_VARS, NULL});
-    run_cmd((char *const[]){"dbus-update-activation-environment", SESSION_VARS,
-                            NULL});
-  }
+  run_cmd(
+      (char *const[]){"sh", "-c", (char *)init_import_cmd, SESSION_VARS, NULL});
 }
 
 /* For brevity's sake, struct members are annotated where they are used. */
@@ -470,7 +471,7 @@ int main(int argc, char *argv[]) {
   if (startup_cmd) {
     if (fork() == 0) {
       reset_child_sig();
-      execl("/bin/sh", "/bin/sh", "-c", startup_cmd, (void *)NULL);
+      execl("/bin/sh", "-c", startup_cmd, (void *)NULL);
       _exit(1);
     }
   }
@@ -509,6 +510,7 @@ int main(int argc, char *argv[]) {
 
   wl_list_remove(&server.new_input.link);
   wl_list_remove(&server.request_cursor.link);
+  wl_list_remove(&server.request_set_selection.link);
   wl_list_remove(&server.new_pointer_constraint.link);
   wl_list_remove(&server.pointer_focus_change.link);
   wl_list_remove(&server.request_start_drag.link);
@@ -525,14 +527,15 @@ int main(int argc, char *argv[]) {
 
   wl_list_remove(&server.set_gamma.link);
 
+  wlr_backend_destroy(server.backend);
   wlr_scene_node_destroy(&server.scene->tree.node);
   wlr_xcursor_manager_destroy(server.cursor_mgr);
   wlr_cursor_destroy(server.cursor);
   config_destroy(&server.config);
   wlr_allocator_destroy(server.allocator);
   wlr_renderer_destroy(server.renderer);
-  wlr_backend_destroy(server.backend);
   wl_event_source_remove(sigchld_source);
   wl_display_destroy(server.wl_display);
+
   return 0;
 }

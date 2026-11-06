@@ -26,6 +26,13 @@ libinput = dependency('libinput')
 protocol_dir = wayland_protocols.get_variable('pkgdatadir')
 inc = include_directories('include')
 
+if 'systemd' in init
+  add_project_arguments('-DUSE_SYSTEMD=1', language: 'c')
+endif
+if 'dinit' in init
+  add_project_arguments('-DUSE_DINIT=1', language: 'c')
+endif
+
 add_project_arguments(
     '-DWLR_USE_UNSTABLE',
     '-Wno-unused-parameter',
