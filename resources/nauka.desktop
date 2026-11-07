@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=nauka
 Comment=a minimal tiling wayland compositor based on wlroots and scenefx
-Exec=nauka
+Exec=start-nauka
 Type=Application
 DesktopNames=nauka
 Keywords=tiling;wayland;compositor;

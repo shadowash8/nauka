@@ -50,12 +50,24 @@ meson setup build
 ninja -C build
 #+end_src
 
+You may also choose to specify an init system.
+Supported systems are systemd and dinit:
+
+#+begin_src bash
+  -Dinit=                # For no init files
+         systemd         # Systemd only       [Default]
+         dinit           # Dinit only
+         systemd,dinit   # Systemd and dinit
+#+end_src
+
 ** usage
 
 #+begin_src bash
-nauka [-s]
+nauka [--session] [-s] [-c path]
 
--s for startup script
+-s            for startup script
+--session     for automated dbus population
+-c,--config   for specifying an alternative config file
 #+end_src
 
 
