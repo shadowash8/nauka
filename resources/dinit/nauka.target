@@ -1,0 +1,6 @@
+type           = internal
+restart        = false
+depends-on:    nauka
+waits-for.d:   $XDG_CONFIG_HOME/dinit.d/nauka.d/
+waits-for.d:   $HOME/.config/dinit.d/nauka.d/
+waits-for.d:   /etc/dinit.d/user/nauka.d/

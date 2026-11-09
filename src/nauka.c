@@ -7,8 +7,13 @@
 #include <scenefx/types/wlr_scene.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
@@ -19,6 +24,8 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
+#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
@@ -59,6 +66,74 @@ static int handle_sigchld(int signal_number, void *data) {
   return 1;
 }
 
+static void reset_child_sig(void) {
+  sigset_t set;
+  sigemptyset(&set);
+  sigprocmask(SIG_SETMASK, &set, NULL);
+}
+
+static void run_cmd(char *const argv[]) {
+  pid_t pid = fork();
+  if (pid == 0) {
+    reset_child_sig();
+    execvp(argv[0], argv);
+    _exit(127);
+  } else if (pid > 0) {
+    waitpid(pid, NULL, 0);
+  }
+}
+
+static void notify_ready(void) {
+  const char *path = getenv("NOTIFY_SOCKET");
+  if (!path || !*path)
+    return;
+  struct sockaddr_un addr = {.sun_family = AF_UNIX};
+  size_t len = strlen(path);
+  if (len >= sizeof(addr.sun_path))
+    return;
+  memcpy(addr.sun_path, path, len);
+  if (addr.sun_path[0] == '@')
+    addr.sun_path[0] = '\0';
+  int fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+  if (fd < 0)
+    return;
+  const char msg[] = "READY=1";
+  sendto(fd, msg, sizeof(msg) - 1, 0, (struct sockaddr *)&addr,
+         offsetof(struct sockaddr_un, sun_path) + len);
+  close(fd);
+  unsetenv("NOTIFY_SOCKET");
+}
+
+#define SESSION_VARS                                                           \
+  "WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE"
+
+static const char import_cmd[] =
+#if USE_SYSTEMD
+    "systemctl --user import-environment " SESSION_VARS ";"
+#endif
+#if USE_DINIT
+    "dinitctl setenv " SESSION_VARS ";"
+#endif
+    "hash dbus-update-activation-environment 2>/dev/null && \
+                 dbus-update-activation-environment";
+
+static void import_session_env(void) {
+  run_cmd((char *const[]){"sh", "-c", (char *)import_cmd, NULL});
+}
+
+static const char unimport_cmd[] =
+#if USE_SYSTEMD
+    "systemctl --user unset-environment " SESSION_VARS ";"
+#endif
+#if USE_DINIT
+    "dinitctl unsetenv " SESSION_VARS ";"
+#endif
+    ":";
+static void unimport_session_env(void) {
+
+  run_cmd((char *const[]){"sh", "-c", (char *)unimport_cmd, NULL});
+}
+
 /* For brevity's sake, struct members are annotated where they are used. */
 int main(int argc, char *argv[]) {
   wlr_log_init(WLR_DEBUG, NULL);
@@ -66,8 +141,23 @@ int main(int argc, char *argv[]) {
   char *config_path = NULL;
 
   int c;
-  while ((c = getopt(argc, argv, "s:c:h")) != -1) {
+  bool session_mode = false;
+  for (;;) {
+    int opt_idx = 0;
+    static struct option long_options[] = {
+        {"session", no_argument, 0, 1},
+        {"config", required_argument, 0, 'c'},
+        {0, 0, 0, 0},
+    };
+    c = getopt_long(argc, argv, "s:c:h", long_options, &opt_idx);
+
+    if (c == -1)
+      break;
+
     switch (c) {
+    case 1:
+      session_mode = true;
+      break;
     case 's':
       startup_cmd = optarg;
       break;
@@ -75,14 +165,21 @@ int main(int argc, char *argv[]) {
       config_path = optarg;
       break;
     default:
-      printf("Usage: %s [-s startup command] [-c config file]\n", argv[0]);
+      printf("Usage: %s [--session] [-s startup command] [--config,-c config "
+             "file]\n",
+             argv[0]);
       return 0;
     }
   }
   if (optind < argc) {
-    printf("Usage: %s [-s startup command] [-c config file]\n", argv[0]);
+    printf("Usage: %s [--session] [-s startup command] [--config,-c config "
+           "file]\n",
+           argv[0]);
     return 0;
   }
+
+  setenv("XDG_CURRENT_DESKTOP", "nauka", true);
+  setenv("XDG_SESSION_TYPE", "wayland", true);
 
   struct nauka_server server = {0};
   /* The Wayland display is managed by libwayland. It handles accepting
@@ -137,6 +234,8 @@ int main(int argc, char *argv[]) {
   wlr_data_device_manager_create(server.wl_display);
   wlr_data_control_manager_v1_create(server.wl_display);
   wlr_screencopy_manager_v1_create(server.wl_display);
+  wlr_ext_image_copy_capture_manager_v1_create(server.wl_display, 1);
+  wlr_ext_output_image_capture_source_manager_v1_create(server.wl_display, 1);
   wlr_viewporter_create(server.wl_display);
   server.virtual_pointer_manager =
       wlr_virtual_pointer_manager_v1_create(server.wl_display);
@@ -362,6 +461,7 @@ int main(int argc, char *argv[]) {
     const char *x11_display = ":1";
     server.xwayland_satellite_pid = fork();
     if (server.xwayland_satellite_pid == 0) {
+      reset_child_sig();
       execlp("xwayland-satellite", "xwayland-satellite", x11_display,
              (void *)NULL);
       _exit(1);
@@ -372,11 +472,19 @@ int main(int argc, char *argv[]) {
     } else {
       wlr_log(WLR_ERROR, "failed to fork for xwayland-satellite");
     }
+  } else
+    unsetenv("DISPLAY");
+
+  if (session_mode) {
+    import_session_env();
+    notify_ready();
   }
 
   if (startup_cmd) {
     if (fork() == 0) {
-      execl("/bin/sh", "/bin/sh", "-c", startup_cmd, (void *)NULL);
+      reset_child_sig();
+      execl("/bin/sh", "-c", startup_cmd, (void *)NULL);
+      _exit(1);
     }
   }
 
@@ -410,11 +518,11 @@ int main(int argc, char *argv[]) {
   wl_list_remove(&server.cursor_button.link);
   wl_list_remove(&server.cursor_axis.link);
   wl_list_remove(&server.cursor_frame.link);
-  wl_list_remove(&server.request_set_selection.link);
   wl_list_remove(&server.new_kb_shortcuts_inhibitor.link);
 
   wl_list_remove(&server.new_input.link);
   wl_list_remove(&server.request_cursor.link);
+  wl_list_remove(&server.request_set_selection.link);
   wl_list_remove(&server.new_pointer_constraint.link);
   wl_list_remove(&server.pointer_focus_change.link);
   wl_list_remove(&server.request_start_drag.link);
@@ -431,14 +539,18 @@ int main(int argc, char *argv[]) {
 
   wl_list_remove(&server.set_gamma.link);
 
+  wlr_backend_destroy(server.backend);
   wlr_scene_node_destroy(&server.scene->tree.node);
   wlr_xcursor_manager_destroy(server.cursor_mgr);
   wlr_cursor_destroy(server.cursor);
   config_destroy(&server.config);
   wlr_allocator_destroy(server.allocator);
   wlr_renderer_destroy(server.renderer);
-  wlr_backend_destroy(server.backend);
   wl_event_source_remove(sigchld_source);
   wl_display_destroy(server.wl_display);
+
+  if (session_mode)
+    unimport_session_env();
+
   return 0;
 }
