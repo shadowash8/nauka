@@ -31,8 +31,7 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
   rules_apply(toplevel, &box);
 
   if (toplevel->floating) {
-    wlr_scene_node_reparent(&toplevel->scene_tree->node,
-                            server->floating_tree);
+    wlr_scene_node_reparent(&toplevel->scene_tree->node, server->floating_tree);
 
     if (!toplevel->geometry_from_rule) {
       int width = box.width / 2;
@@ -47,7 +46,7 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
     }
 
     animation_start(toplevel, toplevel->floating_geometry.x,
-                              toplevel->floating_geometry.y);
+                    toplevel->floating_geometry.y);
 
     /* actually request this size from the client — without this, only
      * the scene node moves, and the surface keeps whatever size it
@@ -58,14 +57,12 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
   }
 
   if (server->config.new_window_at_bottom)
-    wl_list_insert(server->toplevels.prev,
-                   &toplevel->link); /* tail */
+    wl_list_insert(server->toplevels.prev, &toplevel->link); /* tail */
   else
     wl_list_insert(&server->toplevels, &toplevel->link); /* head */
   toplevel_update_borders(toplevel);
   toplevel_update_blur(toplevel);
-  toplevel_update_opacity(toplevel,
-                          toplevel == server->focused_toplevel);
+  toplevel_update_opacity(toplevel, toplevel == server->focused_toplevel);
 
   /* a window rule may have put this window on another tag -- it
    * shouldn't steal focus then */
@@ -328,7 +325,7 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
   toplevel->radius_override = -1;
   toplevel->border_tree = wlr_scene_tree_create(toplevel->scene_tree);
   wlr_scene_node_raise_to_top(&toplevel->border_tree->node);
-  toplevel->width_weight = 0.80;
+  toplevel->width_weight = 0.90;
 
   /* Listen to the various events it can emit */
   toplevel->map.notify = xdg_toplevel_map;
@@ -469,7 +466,7 @@ void toplevel_toggle_floating(struct nauka_toplevel *toplevel) {
     };
 
     animation_start(toplevel, toplevel->floating_geometry.x,
-                              toplevel->floating_geometry.y);
+                    toplevel->floating_geometry.y);
     wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, width, height);
   } else {
     wlr_scene_node_reparent(&toplevel->scene_tree->node, server->toplevel_tree);
@@ -511,7 +508,7 @@ void toplevel_toggle_sticky(struct nauka_toplevel *toplevel) {
       };
 
       animation_start(toplevel, toplevel->floating_geometry.x,
-                                toplevel->floating_geometry.y);
+                      toplevel->floating_geometry.y);
       wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, width, height);
     }
   } else {
@@ -559,7 +556,7 @@ static void toplevel_save_floating_geometry(struct nauka_toplevel *toplevel) {
 static void
 toplevel_restore_floating_geometry(struct nauka_toplevel *toplevel) {
   animation_start(toplevel, toplevel->floating_geometry.x,
-                            toplevel->floating_geometry.y);
+                  toplevel->floating_geometry.y);
   wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel,
                             toplevel->floating_geometry.width,
                             toplevel->floating_geometry.height);

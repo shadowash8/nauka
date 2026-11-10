@@ -1,5 +1,5 @@
-#include "animation.h"
 #include "layout.h"
+#include "animation.h"
 #include "nauka.h"
 
 #include <math.h>
