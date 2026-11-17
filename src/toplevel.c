@@ -6,6 +6,7 @@
 
 #include <scenefx/types/wlr_scene.h>
 #include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
@@ -352,18 +353,108 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
                 &toplevel->request_fullscreen);
 }
 
+static struct nauka_toplevel *
+popup_root_toplevel(struct wlr_xdg_popup *xdg_popup) {
+  struct wlr_surface *parent = xdg_popup->parent;
+
+  while (parent != NULL) {
+    struct wlr_xdg_popup *parent_popup =
+        wlr_xdg_popup_try_from_wlr_surface(parent);
+    if (parent_popup != NULL) {
+      parent = parent_popup->parent;
+      continue;
+    }
+
+    struct wlr_xdg_surface *parent_xdg =
+        wlr_xdg_surface_try_from_wlr_surface(parent);
+    if (parent_xdg != NULL &&
+        parent_xdg->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+      return parent_xdg->data;
+    }
+
+    return NULL;
+  }
+
+  return NULL;
+}
+
+bool nauka_popup_unconstrain(struct nauka_popup *popup) {
+  struct nauka_server *server = popup->server;
+  if (server == NULL || popup->xdg_popup == NULL) {
+    return false;
+  }
+
+  struct wlr_output *output = NULL;
+  int anchor_x = 0;
+  int anchor_y = 0;
+
+  if (popup->toplevel != NULL) {
+    struct nauka_toplevel *toplevel = popup->toplevel;
+    struct wlr_box *geometry = &toplevel->xdg_toplevel->base->geometry;
+
+    output = wlr_output_layout_output_at(
+        server->output_layout,
+        toplevel->scene_tree->node.x + geometry->width / 2.0,
+        toplevel->scene_tree->node.y + geometry->height / 2.0);
+
+    /*
+     * The scene node starts at the top-left of the window geometry, while
+     * popups are positioned in toplevel surface coordinates. Compensate for
+     * the xdg geometry offset.
+     */
+    anchor_x = toplevel->scene_tree->node.x - geometry->x;
+    anchor_y = toplevel->scene_tree->node.y - geometry->y;
+  } else if (popup->layer_surface != NULL &&
+             popup->layer_surface->layer_surface->output != NULL) {
+    struct nauka_layer_surface *layer_surface = popup->layer_surface;
+
+    output = layer_surface->layer_surface->output;
+    anchor_x = layer_surface->scene_tree->tree->node.x;
+    anchor_y = layer_surface->scene_tree->tree->node.y;
+  } else {
+    return false;
+  }
+
+  if (output == NULL) {
+    return false;
+  }
+
+  struct wlr_box output_box = {0};
+  wlr_output_layout_get_box(server->output_layout, output, &output_box);
+  if (output_box.width <= 0 || output_box.height <= 0) {
+    return false;
+  }
+
+  /* Express the output box in the popup parent's surface coordinate space. */
+  struct wlr_box constraint = {
+      .x = output_box.x - anchor_x,
+      .y = output_box.y - anchor_y,
+      .width = output_box.width,
+      .height = output_box.height,
+  };
+
+  wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &constraint);
+  return true;
+}
+
 static void xdg_popup_commit(struct wl_listener *listener, void *data) {
   /* Called when a new surface state is committed. */
   struct nauka_popup *popup = wl_container_of(listener, popup, commit);
 
   if (popup->xdg_popup->base->initial_commit) {
-    /* When an xdg_surface performs an initial commit, the compositor must
-     * reply with a configure so the client can map the surface.
-     * nauka sends an empty configure. A more sophisticated compositor
-     * might change an xdg_popup's geometry to ensure it's not positioned
-     * off-screen, for example. */
-    wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+    /* Constrain the popup to the output so menus don't open off-screen.
+     * If we cannot determine a parent/output, still send an empty configure
+     * so the client can map. */
+    if (!nauka_popup_unconstrain(popup)) {
+      wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+    }
   }
+}
+
+static void xdg_popup_reposition(struct wl_listener *listener, void *data) {
+  (void)data;
+  struct nauka_popup *popup = wl_container_of(listener, popup, reposition);
+  nauka_popup_unconstrain(popup);
 }
 
 static void xdg_popup_destroy(struct wl_listener *listener, void *data) {
@@ -372,12 +463,15 @@ static void xdg_popup_destroy(struct wl_listener *listener, void *data) {
 
   wl_list_remove(&popup->commit.link);
   wl_list_remove(&popup->destroy.link);
+  wl_list_remove(&popup->reposition.link);
 
   free(popup);
 }
 
 void server_new_xdg_popup(struct wl_listener *listener, void *data) {
   /* This event is raised when a client creates a new popup. */
+  struct nauka_server *server =
+      wl_container_of(listener, server, new_xdg_popup);
   struct wlr_xdg_popup *xdg_popup = data;
 
   if (xdg_popup->parent == NULL) {
@@ -390,6 +484,8 @@ void server_new_xdg_popup(struct wl_listener *listener, void *data) {
 
   struct nauka_popup *popup = calloc(1, sizeof(*popup));
   popup->xdg_popup = xdg_popup;
+  popup->server = server;
+  popup->toplevel = popup_root_toplevel(xdg_popup);
 
   /* We must add xdg popups to the scene graph so they get rendered. The
    * wlroots scene graph provides a helper for this, but to use it we must
@@ -433,6 +529,9 @@ void server_new_xdg_popup(struct wl_listener *listener, void *data) {
 
   popup->commit.notify = xdg_popup_commit;
   wl_signal_add(&xdg_popup->base->surface->events.commit, &popup->commit);
+
+  popup->reposition.notify = xdg_popup_reposition;
+  wl_signal_add(&xdg_popup->events.reposition, &popup->reposition);
 
   popup->destroy.notify = xdg_popup_destroy;
   wl_signal_add(&xdg_popup->events.destroy, &popup->destroy);

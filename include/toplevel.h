@@ -45,10 +45,17 @@ struct nauka_toplevel {
   bool animating;
 };
 
+struct nauka_server;
+struct nauka_layer_surface;
+
 struct nauka_popup {
   struct wlr_xdg_popup *xdg_popup;
+  struct nauka_server *server;
+  struct nauka_toplevel *toplevel;
+  struct nauka_layer_surface *layer_surface;
   struct wl_listener commit;
   struct wl_listener destroy;
+  struct wl_listener reposition;
 };
 
 bool toplevel_is_visible(struct nauka_toplevel *toplevel);
@@ -62,6 +69,8 @@ void server_new_xdg_toplevel(struct wl_listener *listener, void *data);
 void update_toplevel_visibility(struct nauka_server *server);
 
 void server_new_xdg_popup(struct wl_listener *listener, void *data);
+
+bool nauka_popup_unconstrain(struct nauka_popup *popup);
 
 void toplevel_begin_move(struct nauka_toplevel *toplevel);
 

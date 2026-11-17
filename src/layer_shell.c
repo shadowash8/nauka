@@ -168,14 +168,23 @@ static void layer_surface_handle_destroy(struct wl_listener *listener,
 static void layer_popup_commit(struct wl_listener *listener, void *data) {
   struct nauka_popup *popup = wl_container_of(listener, popup, commit);
   if (popup->xdg_popup->base->initial_commit) {
-    wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+    if (!nauka_popup_unconstrain(popup)) {
+      wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
+    }
   }
+}
+
+static void layer_popup_reposition(struct wl_listener *listener, void *data) {
+  (void)data;
+  struct nauka_popup *popup = wl_container_of(listener, popup, reposition);
+  nauka_popup_unconstrain(popup);
 }
 
 static void layer_popup_destroy(struct wl_listener *listener, void *data) {
   struct nauka_popup *popup = wl_container_of(listener, popup, destroy);
   wl_list_remove(&popup->commit.link);
   wl_list_remove(&popup->destroy.link);
+  wl_list_remove(&popup->reposition.link);
   free(popup);
 }
 
@@ -187,12 +196,16 @@ static void layer_surface_handle_new_popup(struct wl_listener *listener,
 
   struct nauka_popup *popup = calloc(1, sizeof(*popup));
   popup->xdg_popup = xdg_popup;
+  popup->server = layer_surface->server;
+  popup->layer_surface = layer_surface;
 
   xdg_popup->base->data = wlr_scene_xdg_surface_create(
       layer_surface->scene_tree->tree, xdg_popup->base);
 
   popup->commit.notify = layer_popup_commit;
   wl_signal_add(&xdg_popup->base->surface->events.commit, &popup->commit);
+  popup->reposition.notify = layer_popup_reposition;
+  wl_signal_add(&xdg_popup->events.reposition, &popup->reposition);
   popup->destroy.notify = layer_popup_destroy;
   wl_signal_add(&xdg_popup->events.destroy, &popup->destroy);
 }
