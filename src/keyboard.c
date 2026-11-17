@@ -109,6 +109,66 @@ static void keyboard_handle_modifiers(struct wl_listener *listener,
                                      &keyboard->wlr_keyboard->modifiers);
 }
 
+/* Find the next visible toplevel after `from` in the toplevel list, wrapping
+ * around. If `from` is NULL, start from the beginning of the list. */
+static struct nauka_toplevel *
+next_visible_toplevel(struct nauka_server *server,
+                      struct nauka_toplevel *from) {
+  struct nauka_toplevel *it;
+  bool past_from = false;
+
+  wl_list_for_each(it, &server->toplevels, link) {
+    if (it == from) {
+      past_from = true;
+      continue;
+    }
+    if (past_from && toplevel_is_visible(it)) {
+      return it;
+    }
+  }
+
+  wl_list_for_each(it, &server->toplevels, link) {
+    if (it == from) {
+      break;
+    }
+    if (toplevel_is_visible(it)) {
+      return it;
+    }
+  }
+
+  return NULL;
+}
+
+/* Find the previous visible toplevel before `from` in the toplevel list,
+ * wrapping around. If `from` is NULL, start from the end of the list. */
+static struct nauka_toplevel *
+prev_visible_toplevel(struct nauka_server *server,
+                      struct nauka_toplevel *from) {
+  struct nauka_toplevel *it;
+  bool past_from = false;
+
+  wl_list_for_each_reverse(it, &server->toplevels, link) {
+    if (it == from) {
+      past_from = true;
+      continue;
+    }
+    if (past_from && toplevel_is_visible(it)) {
+      return it;
+    }
+  }
+
+  wl_list_for_each_reverse(it, &server->toplevels, link) {
+    if (it == from) {
+      break;
+    }
+    if (toplevel_is_visible(it)) {
+      return it;
+    }
+  }
+
+  return NULL;
+}
+
 static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
                             const xkb_keysym_t *syms, int nsyms) {
   bool handled = false;
@@ -168,58 +228,13 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
           break; /* don't cycle focus while fullscreen */
         }
 
-        if (wl_list_empty(&server->toplevels)) {
-          break;
+        struct nauka_toplevel *focused = server->focused_toplevel;
+        if (focused != NULL && !toplevel_is_visible(focused)) {
+          focused = NULL;
         }
 
-        struct nauka_toplevel *focused = NULL;
-        struct nauka_toplevel *it;
-
-        wl_list_for_each(it, &server->toplevels, link) {
-          if (it->xdg_toplevel->current.activated) {
-            focused = it;
-            break;
-          }
-        }
-
-        if (focused == NULL) {
-          /* nothing focused, just grab the first one on the current tag */
-          wl_list_for_each(it, &server->toplevels, link) {
-            if (it->tag == server->current_tag) {
-              focus_toplevel(it);
-              break;
-            }
-          }
-          break;
-        }
-
-        struct nauka_toplevel *next = NULL;
-        bool past_focused = false;
-
-        wl_list_for_each(it, &server->toplevels, link) {
-          if (it == focused) {
-            past_focused = true;
-            continue;
-          }
-          if (past_focused && it->tag == server->current_tag) {
-            next = it;
-            break;
-          }
-        }
-
-        if (next == NULL) {
-          wl_list_for_each(it, &server->toplevels, link) {
-            if (it == focused) {
-              break;
-            }
-            if (it->tag == server->current_tag) {
-              next = it;
-              break;
-            }
-          }
-        }
-
-        if (next != NULL && next != focused) {
+        struct nauka_toplevel *next = next_visible_toplevel(server, focused);
+        if (next != NULL) {
           focus_toplevel(next);
         }
         break;
@@ -230,68 +245,15 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
           break;
         }
 
-        if (wl_list_empty(&server->toplevels)) {
-          break;
+        struct nauka_toplevel *focused = server->focused_toplevel;
+        if (focused != NULL && !toplevel_is_visible(focused)) {
+          focused = NULL;
         }
 
-        struct nauka_toplevel *focused = NULL;
-        struct nauka_toplevel *it;
-
-        wl_list_for_each(it, &server->toplevels, link) {
-          if (it->xdg_toplevel->current.activated) {
-            focused = it;
-            break;
-          }
-        }
-
-        if (focused == NULL) {
-          /* Nothing focused: grab the last window on the current tag. */
-          wl_list_for_each_reverse(it, &server->toplevels, link) {
-            if (it->tag == server->current_tag) {
-              focus_toplevel(it);
-              break;
-            }
-          }
-          break;
-        }
-
-        struct nauka_toplevel *prev = NULL;
-        bool past_focused = false;
-
-        /*
-         * Walk backwards through the list.
-         * Everything we encounter before `focused` in this traversal
-         * is after `focused` in the normal list order.
-         */
-        wl_list_for_each_reverse(it, &server->toplevels, link) {
-          if (it == focused) {
-            past_focused = true;
-            continue;
-          }
-
-          if (past_focused && it->tag == server->current_tag) {
-            prev = it;
-            break;
-          }
-        }
-
-        /*
-         * We reached the beginning of the list without finding one.
-         * Wrap around to the last window on the current tag.
-         */
-        if (prev == NULL) {
-          wl_list_for_each_reverse(it, &server->toplevels, link) {
-            if (it->tag == server->current_tag) {
-              prev = it;
-              break;
-            }
-          }
-        }
-
-        if (prev != NULL && prev != focused) {
+        struct nauka_toplevel *prev = prev_visible_toplevel(server, focused);
+        if (prev != NULL) {
           focus_toplevel(prev);
         }
-
         break;
       }
       case NAUKA_ACTION_SWAP_NEXT_TOPLEVEL: {
