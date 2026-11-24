@@ -479,7 +479,7 @@ void server_new_keyboard(struct nauka_server *server,
   keyboard->wlr_keyboard = wlr_keyboard;
 
   keyboard_apply_keymap(server, wlr_keyboard);
-  wlr_keyboard_set_repeat_info(wlr_keyboard, 25, 600);
+  wlr_keyboard_set_repeat_info(wlr_keyboard, 60, 250);
 
   /* Here we set up listeners for keyboard events. */
   keyboard->modifiers.notify = keyboard_handle_modifiers;
