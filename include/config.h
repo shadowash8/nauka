@@ -2,6 +2,7 @@
 #define NAUKA_CONFIG_H
 
 #include "layout.h"
+#include "tags.h"
 #include <regex.h>
 #include <stdint.h>
 #include <wayland-server-protocol.h>
@@ -127,6 +128,8 @@ struct nauka_config {
   int repeat_rate;
 
   enum nauka_layout_mode default_layout;
+  enum nauka_layout_mode tag_layouts[NAUKA_TAG_COUNT];
+  bool tag_layout_set[NAUKA_TAG_COUNT];
   double master_factor;
   bool new_window_at_bottom;
 };

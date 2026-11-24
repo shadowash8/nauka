@@ -345,8 +345,8 @@ static void process_cursor_motion(struct nauka_server *server, uint32_t time) {
     wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "default");
   }
   if (server->config.focus_follows_mouse &&
-      server->current_layout != NAUKA_LAYOUT_SCROLLER && toplevel != NULL &&
-      toplevel != server->focused_toplevel) {
+      server->tag_layout[server->current_tag] != NAUKA_LAYOUT_SCROLLER &&
+      toplevel != NULL && toplevel != server->focused_toplevel) {
     focus_toplevel(toplevel);
   }
   if (surface) {

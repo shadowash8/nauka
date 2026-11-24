@@ -60,6 +60,10 @@ static void config_set_defaults(struct nauka_config *config) {
 
   config->master_factor = 0.55;
   config->default_layout = NAUKA_LAYOUT_SCROLLER;
+  for (int i = 0; i < NAUKA_TAG_COUNT; i++) {
+    config->tag_layouts[i] = NAUKA_LAYOUT_SCROLLER;
+    config->tag_layout_set[i] = false;
+  }
   config->new_window_at_bottom = false;
 
   strcpy(config->cursor_theme, "Adwaita");
@@ -74,6 +78,19 @@ static void config_set_defaults(struct nauka_config *config) {
 static bool parse_bool(const char *v) {
   return strcasecmp(v, "true") == 0 || strcmp(v, "1") == 0 ||
          strcasecmp(v, "yes") == 0;
+}
+
+static bool parse_layout_name(const char *name, enum nauka_layout_mode *out) {
+  if (strcasecmp(name, "grid") == 0) {
+    *out = NAUKA_LAYOUT_GRID;
+  } else if (strcasecmp(name, "master") == 0) {
+    *out = NAUKA_LAYOUT_MASTER;
+  } else if (strcasecmp(name, "scroller") == 0) {
+    *out = NAUKA_LAYOUT_SCROLLER;
+  } else {
+    return false;
+  }
+  return true;
 }
 
 static bool parse_transform(const char *v, enum wl_output_transform *out) {
@@ -611,13 +628,37 @@ static void config_parse_line(struct nauka_config *config, char *line,
     char *value = next_token(&cursor);
     if (value == NULL)
       return;
-    if (strcasecmp(value, "grid") == 0) {
-      config->default_layout = NAUKA_LAYOUT_GRID;
-    } else if (strcasecmp(value, "master") == 0) {
-      config->default_layout = NAUKA_LAYOUT_MASTER;
-    } else if (strcasecmp(value, "scroller") == 0) {
-      config->default_layout = NAUKA_LAYOUT_SCROLLER;
+    enum nauka_layout_mode mode;
+    if (parse_layout_name(value, &mode)) {
+      config->default_layout = mode;
+    } else {
+      wlr_log(WLR_ERROR, "default_layout: unknown layout '%s'", value);
     }
+    return;
+  }
+
+  if (strcmp(directive, "tag_layout") == 0) {
+    char *tag_str = next_token(&cursor);
+    char *layout_str = next_token(&cursor);
+    if (tag_str == NULL || layout_str == NULL) {
+      wlr_log(WLR_ERROR, "tag_layout: expected <tag> <layout>");
+      return;
+    }
+
+    int tag = atoi(tag_str);
+    if (tag < 1 || tag > NAUKA_TAG_COUNT) {
+      wlr_log(WLR_ERROR, "tag_layout: tag must be 1-%d", NAUKA_TAG_COUNT);
+      return;
+    }
+
+    enum nauka_layout_mode mode;
+    if (!parse_layout_name(layout_str, &mode)) {
+      wlr_log(WLR_ERROR, "tag_layout: unknown layout '%s'", layout_str);
+      return;
+    }
+
+    config->tag_layouts[tag - 1] = mode;
+    config->tag_layout_set[tag - 1] = true;
     return;
   }
 
@@ -885,16 +926,12 @@ static void config_parse_line(struct nauka_config *config, char *line,
       free(kb);
       return;
     }
-    if (strcasecmp(layout_name, "grid") == 0) {
-      kb->layout = NAUKA_LAYOUT_GRID;
-    } else if (strcasecmp(layout_name, "master") == 0) {
-      kb->layout = NAUKA_LAYOUT_MASTER;
-    } else if (strcasecmp(layout_name, "scroller") == 0) {
-      kb->layout = NAUKA_LAYOUT_SCROLLER;
-    } else {
+    enum nauka_layout_mode mode;
+    if (!parse_layout_name(layout_name, &mode)) {
       free(kb);
       return; /* unrecognized layout name */
     }
+    kb->layout = mode;
     kb->action = NAUKA_ACTION_SET_LAYOUT;
   } else if (strcasecmp(action_str, "grow_focused") == 0) {
     kb->action = NAUKA_ACTION_GROW_FOCUSED;
@@ -930,10 +967,14 @@ void config_load(struct nauka_config *config) {
   char path[PATH_MAX];
   config_get_path(path, sizeof(path));
 
-  if (path[0] == '\0')
-    return;
+  if (path[0] != '\0')
+    parse_file(config, path);
 
-  parse_file(config, path);
+  /* Tags without an explicit tag_layout fall back to default_layout. */
+  for (int i = 0; i < NAUKA_TAG_COUNT; i++) {
+    if (!config->tag_layout_set[i])
+      config->tag_layouts[i] = config->default_layout;
+  }
 }
 
 void parse_file(struct nauka_config *config, const char *path) {

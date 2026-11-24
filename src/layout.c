@@ -182,7 +182,7 @@ void arrange_windows(struct nauka_server *server) {
     if (has_fullscreen)
       continue;
 
-    switch (server->current_layout) {
+    switch (server->tag_layout[server->current_tag]) {
     case NAUKA_LAYOUT_MASTER:
       arrange_master(server, area);
       break;
@@ -202,10 +202,11 @@ void arrange_windows(struct nauka_server *server) {
 void layout_set(struct nauka_server *server, enum nauka_layout_mode mode) {
   if (mode < 0 || mode >= NAUKA_LAYOUT_COUNT)
     return;
-  server->current_layout = mode;
+  server->tag_layout[server->current_tag] = mode;
   arrange_windows(server);
 }
 
 void layout_cycle(struct nauka_server *server) {
-  layout_set(server, (server->current_layout + 1) % NAUKA_LAYOUT_COUNT);
+  layout_set(server, (server->tag_layout[server->current_tag] + 1) %
+                         NAUKA_LAYOUT_COUNT);
 }

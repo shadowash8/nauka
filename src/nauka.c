@@ -280,7 +280,8 @@ int main(int argc, char *argv[]) {
     config_set_path(config_path);
   }
   config_load(&server.config);
-  server.current_layout = server.config.default_layout;
+  for (int i = 0; i < NAUKA_TAG_COUNT; i++)
+    server.tag_layout[i] = server.config.tag_layouts[i];
 
   /* Initialize fixed tags + ext-workspace-v1 */
   tags_init(&server);
