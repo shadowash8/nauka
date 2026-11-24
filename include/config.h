@@ -123,6 +123,8 @@ struct nauka_config {
   char keyboard_layout[32];
   char keyboard_variant[32];
   char keyboard_options[256];
+  int repeat_delay;
+  int repeat_rate;
 
   enum nauka_layout_mode default_layout;
   double master_factor;

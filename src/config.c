@@ -67,6 +67,8 @@ static void config_set_defaults(struct nauka_config *config) {
   strcpy(config->keyboard_layout, "us");
   config->keyboard_variant[0] = '\0';
   config->keyboard_options[0] = '\0';
+  config->repeat_delay = 600;
+  config->repeat_rate = 25;
 }
 
 static bool parse_bool(const char *v) {
@@ -588,6 +590,20 @@ static void config_parse_line(struct nauka_config *config, char *line,
     if (value != NULL)
       snprintf(config->keyboard_options, sizeof(config->keyboard_options), "%s",
                value);
+    return;
+  }
+
+  if (strcmp(directive, "repeat_delay") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->repeat_delay = atoi(value);
+    return;
+  }
+
+  if (strcmp(directive, "repeat_rate") == 0) {
+    char *value = next_token(&cursor);
+    if (value != NULL)
+      config->repeat_rate = atoi(value);
     return;
   }
 

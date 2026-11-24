@@ -205,6 +205,10 @@ static bool try_keybindings(struct nauka_server *server, uint32_t modifiers,
         struct nauka_keyboard *kbd;
         wl_list_for_each(kbd, &server->keyboards, link) {
           keyboard_apply_keymap(server, kbd->wlr_keyboard);
+
+          wlr_keyboard_set_repeat_info(kbd->wlr_keyboard,
+                                       server->config.repeat_rate,
+                                       server->config.repeat_delay);
         }
         arrange_windows(server);
         toplevel_apply_config(server);
@@ -479,7 +483,8 @@ void server_new_keyboard(struct nauka_server *server,
   keyboard->wlr_keyboard = wlr_keyboard;
 
   keyboard_apply_keymap(server, wlr_keyboard);
-  wlr_keyboard_set_repeat_info(wlr_keyboard, 60, 250);
+  wlr_keyboard_set_repeat_info(wlr_keyboard, server->config.repeat_rate,
+                               server->config.repeat_delay);
 
   /* Here we set up listeners for keyboard events. */
   keyboard->modifiers.notify = keyboard_handle_modifiers;
