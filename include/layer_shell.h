@@ -23,6 +23,7 @@ struct nauka_layer_surface {
   struct wl_listener output_destroy;
 
   bool mapped;
+  uint32_t ipc_id;
 };
 
 void arrange_layers(struct nauka_output *output);

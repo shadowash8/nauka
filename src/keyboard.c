@@ -67,6 +67,8 @@ void focus_toplevel(struct nauka_toplevel *toplevel) {
   server->focused_toplevel = toplevel;
   server->tag_focus[toplevel->tag] = toplevel;
 
+  nauka_ipc_toplevel_focused(toplevel);
+
   /* Remember last tiled focused window */
   if (!toplevel->floating) {
     server->last_tiled_focus = toplevel;

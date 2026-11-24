@@ -65,6 +65,8 @@ static void xdg_toplevel_map(struct wl_listener *listener, void *data) {
   toplevel_update_blur(toplevel);
   toplevel_update_opacity(toplevel, toplevel == server->focused_toplevel);
 
+  nauka_ipc_toplevel_mapped(toplevel);
+
   /* a window rule may have put this window on another tag -- it
    * shouldn't steal focus then */
   if (toplevel_is_visible(toplevel))
@@ -100,6 +102,7 @@ static void xdg_toplevel_unmap(struct wl_listener *listener, void *data) {
   }
 
   wl_list_remove(&toplevel->link);
+  nauka_ipc_toplevel_unmapped(toplevel);
 
   if (server->prev_focused == toplevel) {
     server->prev_focused = NULL;
@@ -174,6 +177,7 @@ static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
   toplevel_update_blur(toplevel);
   toplevel_update_opacity(toplevel,
                           toplevel == toplevel->server->focused_toplevel);
+  nauka_ipc_toplevel_updated(toplevel);
 }
 
 static void xdg_toplevel_destroy(struct wl_listener *listener, void *data) {
@@ -572,6 +576,7 @@ void toplevel_toggle_floating(struct nauka_toplevel *toplevel) {
   }
 
   arrange_windows(server);
+  nauka_ipc_toplevel_state(toplevel);
 }
 
 void toplevel_toggle_sticky(struct nauka_toplevel *toplevel) {
@@ -622,6 +627,8 @@ void toplevel_toggle_sticky(struct nauka_toplevel *toplevel) {
 
   update_toplevel_visibility(server);
   arrange_windows(server);
+  nauka_ipc_toplevel_tagged(toplevel);
+  nauka_ipc_toplevel_state(toplevel);
 }
 
 void toplevel_toggle_fullscreen(struct nauka_toplevel *toplevel) {
@@ -708,6 +715,8 @@ void toplevel_set_fullscreen(struct nauka_toplevel *toplevel, bool fullscreen) {
 
   update_toplevel_visibility(toplevel->server);
   arrange_windows(toplevel->server);
+  nauka_ipc_toplevel_tagged(toplevel);
+  nauka_ipc_toplevel_state(toplevel);
 }
 
 void toplevel_swap(struct nauka_toplevel *a, struct nauka_toplevel *b) {

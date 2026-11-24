@@ -8,6 +8,7 @@ nauka is a small and minimal Wayland compositor with all the eye candy one needs
 - *lightweight & fast*: minimal footprint, builds in seconds.
 - *tags*: each window has its assigned tags.
 - *layouts*: various layouts like master, grid and scroller
+- *ipc*: query toplevels, layers and outputs, or subscribe to events
 - *eye-candy*: border radius, opacity, and blur are everything one needs.
 - *animations*: fluid window animations with barely any overhead.
 - *hot reload config*: easy configuration language.
@@ -81,6 +82,37 @@ for an example configuration, see =default.conf= in the repository.
 
 the configuration file supports hot reloading, so changes can be
 applied without restarting nauka.
+
+** ipc
+
+nauka exposes a small line-based Unix-socket IPC. The socket lives at
+=$XDG_RUNTIME_DIR/nauka-ipc.sock= by default; set =NAUKA_IPC_SOCKET= to
+override it for both the compositor and the client.
+
+#+begin_src bash
+  nauka-ipc toplevels   # app_id<TAB>title, one per line
+  nauka-ipc layers      # layer namespace, one per line
+  nauka-ipc outputs     # output name, one per line
+  nauka-ipc subscribe   # snapshot, then live events
+#+end_src
+
+=subscribe= prints a =subscribed= line, a snapshot of the current state,
+then events as they happen:
+
+#+begin_src text
+  toplevel new <id> <tag> <app_id><TAB><title>
+  toplevel title <id> <app_id><TAB><title>
+  toplevel focus <id> <app_id><TAB><title>
+  toplevel tag <id> <tag>
+  toplevel state <id> <floating> <fullscreen> <sticky>
+  toplevel destroy <id>
+  tag <tag>
+  layout <tag> <grid|master|scroller>
+  output new <name>
+  output destroy <name>
+  layer new <id> <namespace> <output>
+  layer destroy <id>
+#+end_src
 
 * nix flake
 add nauka input to flake file

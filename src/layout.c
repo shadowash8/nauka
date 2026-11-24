@@ -203,6 +203,7 @@ void layout_set(struct nauka_server *server, enum nauka_layout_mode mode) {
   if (mode < 0 || mode >= NAUKA_LAYOUT_COUNT)
     return;
   server->tag_layout[server->current_tag] = mode;
+  nauka_ipc_layout_changed(server);
   arrange_windows(server);
 }
 

@@ -71,6 +71,8 @@ executable(
         'src/config.c',
         'src/decoration.c',
         'src/idle.c',
+        'src/ipc.c',
+        'src/ipc_path.c',
         'src/keyboard.c',
         'src/layer_shell.c',
         'src/layout.c',
@@ -91,6 +93,16 @@ executable(
         pixman,
         libinput,
     ],
+    install: true,
+)
+
+executable(
+    'nauka-ipc',
+    [
+        'src/nauka-ipc.c',
+        'src/ipc_path.c',
+    ],
+    include_directories: inc,
     install: true,
 )
 

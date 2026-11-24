@@ -116,6 +116,7 @@ void view_tag(struct nauka_server *server, int tag) {
   if (to_focus != NULL)
     focus_toplevel(to_focus);
 
+  nauka_ipc_tag_changed(server);
   arrange_windows(server);
 }
 
@@ -141,6 +142,8 @@ void move_focused_to_tag(struct nauka_server *server, int tag) {
 
   int old_tag = toplevel->tag;
   toplevel->tag = tag;
+
+  nauka_ipc_toplevel_tagged(toplevel);
 
   workspace_update_hidden(server, old_tag);
   workspace_update_hidden(server, tag);

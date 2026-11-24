@@ -63,6 +63,7 @@ static void layer_surface_handle_map(struct wl_listener *listener, void *data) {
       wl_container_of(listener, layer_surface, map);
 
   layer_surface->mapped = true;
+  nauka_ipc_layer_added(layer_surface);
 
   if (layer_surface->layer_surface->current.keyboard_interactive !=
       ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE) {
@@ -87,6 +88,8 @@ static void layer_surface_handle_unmap(struct wl_listener *listener,
   struct nauka_layer_surface *layer_surface =
       wl_container_of(listener, layer_surface, unmap);
 
+  if (layer_surface->mapped)
+    nauka_ipc_layer_removed(layer_surface);
   layer_surface->mapped = false;
 
   struct nauka_server *server = layer_surface->server;
@@ -153,6 +156,9 @@ static void layer_surface_handle_destroy(struct wl_listener *listener,
 
   struct nauka_layer_surface *layer_surface =
       wl_container_of(listener, layer_surface, destroy);
+
+  if (layer_surface->mapped)
+    nauka_ipc_layer_removed(layer_surface);
 
   wl_list_remove(&layer_surface->link);
   wl_list_remove(&layer_surface->commit.link);

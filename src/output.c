@@ -50,6 +50,8 @@ static void output_destroy(struct wl_listener *listener, void *data) {
   struct nauka_output *output = wl_container_of(listener, output, destroy);
   struct nauka_server *server = output->server;
 
+  nauka_ipc_output_removed(output);
+
   wlr_ext_workspace_group_handle_v1_output_leave(
       output->server->workspace_group, output->wlr_output);
 
@@ -343,6 +345,7 @@ void server_new_output(struct wl_listener *listener, void *data) {
   session_lock_create_output_state(output);
   update_output_manager_config(server);
   arrange_windows(server);
+  nauka_ipc_output_added(output);
 }
 
 void gamma_control_set_gamma(struct wl_listener *listener, void *data) {

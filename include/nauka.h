@@ -1,6 +1,7 @@
 #include "config.h"
 #include "decoration.h"
 #include "idle.h"
+#include "ipc.h"
 #include "keyboard.h"
 #include "layer_shell.h"
 #include "layout.h"
@@ -119,4 +120,7 @@ struct nauka_server {
 
   struct wl_listener workspace_manager_commit;
   struct wl_listener workspace_manager_destroy;
+
+  struct nauka_ipc *ipc;
+  uint32_t next_ipc_id;
 };

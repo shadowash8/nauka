@@ -491,6 +491,8 @@ int main(int argc, char *argv[]) {
 
   config_run_autostart(&server.config);
 
+  nauka_ipc_init(&server);
+
   /* Run the Wayland event loop. This does not return until you exit the
    * compositor. Starting the backend rigged up all of the necessary event
    * loop configuration to listen to libinput events, DRM events, generate
@@ -500,6 +502,7 @@ int main(int argc, char *argv[]) {
 
   /* Once wl_display_run returns, we destroy all clients then shut down the
    * server. */
+  nauka_ipc_finish(&server);
   wl_display_destroy_clients(server.wl_display);
 
   if (server.config.xwayland && server.xwayland_satellite_pid > 0) {

@@ -28,6 +28,9 @@ struct nauka_toplevel {
   bool floating;
   int corner_radius;
   float opacity;
+  uint32_t ipc_id;
+  char ipc_app_id[128];
+  char ipc_title[256];
   /* per-window overrides from window rules; negative means "use the
    * global config value" */
   float opacity_active_override;
