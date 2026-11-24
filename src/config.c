@@ -933,6 +933,9 @@ static void config_parse_line(struct nauka_config *config, char *line,
     }
     kb->layout = mode;
     kb->action = NAUKA_ACTION_SET_LAYOUT;
+  } else if (strcasecmp(action_str, "layout_cycle") == 0 ||
+             strcasecmp(action_str, "cycle_layout") == 0) {
+    kb->action = NAUKA_ACTION_CYCLE_LAYOUT;
   } else if (strcasecmp(action_str, "grow_focused") == 0) {
     kb->action = NAUKA_ACTION_GROW_FOCUSED;
   } else if (strcasecmp(action_str, "shrink_focused") == 0) {
