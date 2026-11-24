@@ -9,3 +9,4 @@ struct nauka_idle_inhibitor {
 
 void server_new_idle_inhibitor(struct wl_listener *listener, void *data);
 void idle_notify_activity(struct nauka_server *server);
+void idle_update_inhibited(struct nauka_server *server);

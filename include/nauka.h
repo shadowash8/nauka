@@ -91,6 +91,7 @@ struct nauka_server {
   struct wlr_idle_inhibit_manager_v1 *idle_inhibit_manager;
   struct wl_listener new_idle_inhibitor;
   int idle_inhibitor_count;
+  bool idle_inhibited;
 
   struct nauka_toplevel *focused_toplevel;
   struct nauka_toplevel *prev_focused;

@@ -8,8 +8,7 @@ static void idle_inhibitor_destroy(struct wl_listener *listener, void *data) {
   struct nauka_server *server = inh->server;
   wl_list_remove(&inh->destroy.link);
   server->idle_inhibitor_count--;
-  wlr_idle_notifier_v1_set_inhibited(server->idle_notifier,
-                                     server->idle_inhibitor_count > 0);
+  idle_update_inhibited(server);
   free(inh);
 }
 
@@ -26,9 +25,32 @@ void server_new_idle_inhibitor(struct wl_listener *listener, void *data) {
   wl_signal_add(&wlr_inh->events.destroy, &inh->destroy);
 
   server->idle_inhibitor_count++;
-  wlr_idle_notifier_v1_set_inhibited(server->idle_notifier, true);
+  idle_update_inhibited(server);
 }
 
 void idle_notify_activity(struct nauka_server *server) {
   wlr_idle_notifier_v1_notify_activity(server->idle_notifier, server->seat);
+}
+
+void idle_update_inhibited(struct nauka_server *server) {
+  if (server->idle_notifier == NULL)
+    return;
+
+  bool inhibited = server->idle_inhibitor_count > 0;
+
+  if (!inhibited) {
+    struct nauka_toplevel *toplevel;
+    wl_list_for_each(toplevel, &server->toplevels, link) {
+      if (toplevel->is_fullscreen && toplevel_is_visible(toplevel)) {
+        inhibited = true;
+        break;
+      }
+    }
+  }
+
+  if (inhibited == server->idle_inhibited)
+    return;
+
+  server->idle_inhibited = inhibited;
+  wlr_idle_notifier_v1_set_inhibited(server->idle_notifier, inhibited);
 }

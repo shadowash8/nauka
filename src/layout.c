@@ -195,6 +195,8 @@ void arrange_windows(struct nauka_server *server) {
       break;
     }
   }
+
+  idle_update_inhibited(server);
 }
 
 void layout_set(struct nauka_server *server, enum nauka_layout_mode mode) {
